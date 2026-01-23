@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+# Installation des dépendances système pour PostgreSQL
 RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -12,13 +13,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Collecte des fichiers statiques (maintenant que STATIC_ROOT est configuré)
 RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
+# On crée un script 'entrypoint.sh' pour lancer plusieurs commandes au démarrage
+RUN echo '#!/bin/sh\n\
+python manage.py migrate --noinput\n\
+python create_admin.py\n\
+gunicorn core.wsgi:application --bind 0.0.0.0:$PORT' > /app/entrypoint.sh
 
-# On crée un script de démarrage rapide
-RUN echo 'python manage.py migrate --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT' > /app/start.sh
-RUN chmod +x /app/start.sh
+RUN chmod +x /app/entrypoint.sh
 
-# On lance le script au lieu de lancer directement gunicorn
-CMD ["/bin/sh", "/app/start.sh"]
+# On utilise le port dynamique de Render ($PORT)
+CMD ["/app/entrypoint.sh"]
