@@ -1,0 +1,140 @@
+{% extends 'base_chef.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .stat-card { transition: transform 0.3s ease; border: none !important; position: relative; overflow: hidden; }
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
+    .notification-dot {
+        position: absolute; top: 10px; right: 10px; width: 12px; height: 12px;
+        border-radius: 50%; background-color: var(--escep-red); border: 2px solid white;
+    }
+    .action-card {
+        transition: all 0.3s ease; border: 2px solid #f0f2f5 !important; background: #ffffff;
+    }
+    .action-card:hover { border-color: var(--escep-blue) !important; background: var(--escep-blue); color: white !important; }
+    .action-card:hover .text-muted, .action-card:hover i, .action-card:hover h6, .action-card:hover p { color: white !important; }
+    .x-small { font-size: 0.75rem; }
+</style>
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h3 class="fw-bold mb-1" style="color: var(--escep-blue);">Tableau de Bord</h3>
+            <p class="text-muted mb-0">Département : <span class="badge bg-primary-subtle text-primary">{{ request.user.departement.nom }}</span></p>
+        </div>
+        <div class="text-end">
+            <div class="bg-white border p-2 rounded-4 shadow-sm px-3">
+                <small class="text-muted d-block x-small fw-bold">SESSION ACTIVE</small>
+                {% if vague_active %}
+                    <span class="badge bg-success rounded-pill">{{ vague_active.libelle }}</span>
+                {% else %}
+                    <span class="badge bg-secondary rounded-pill">Aucune vague active</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-danger border-5">
+                {% if attente_proposition > 0 %}<div class="notification-dot"></div>{% endif %}
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger bg-opacity-10 p-3 rounded-circle me-3"><i class="fas fa-gavel text-danger"></i></div>
+                    <div><h6 class="text-muted small mb-0 fw-bold">À PROPOSER</h6><h3 class="fw-bold mb-0">{{ attente_proposition }}</h3></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-success border-5">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3"><i class="fas fa-calendar-plus text-success"></i></div>
+                    <div><h6 class="text-muted small mb-0 fw-bold">À PROGRAMMER</h6><h3 class="fw-bold mb-0">{{ attente_programmation }}</h3></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-info border-5">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 p-3 rounded-circle me-3"><i class="fas fa-user-graduate text-info"></i></div>
+                    <div><h6 class="text-muted small mb-0 fw-bold">ÉTUDIANTS DEPT</h6><h3 class="fw-bold mb-0">{{ total_etudiants_dept }}</h3></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card shadow-sm rounded-4 p-3 bg-dark text-white">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-white-50 x-small mb-1 fw-bold">THÈMES ENREGISTRÉS</h6>
+                        <h3 class="fw-bold mb-0">{{ dossiers_count }}</h3>
+                    </div>
+                    <i class="fas fa-file-alt fa-2x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-bolt text-warning me-2"></i>Actions Prioritaires</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="{% url 'administration:liste_themes_etudiants' %}" class="btn action-card w-100 p-4 rounded-4 text-start text-decoration-none h-100">
+                                <i class="fas fa-file-signature fa-2x mb-3 text-primary d-block"></i>
+                                <h6 class="fw-bold mb-1">Gérer les Thèmes</h6>
+                                <p class="small text-muted mb-0">Modifier les thèmes et encadreurs.</p>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'administration:planning_liste_vagues' %}" class="btn action-card w-100 p-4 rounded-4 text-start text-decoration-none h-100 position-relative">
+                                {% if attente_proposition > 0 or attente_programmation > 0 %}
+                                    <span class="badge bg-danger position-absolute top-0 end-0 m-3 rounded-pill">Action requise</span>
+                                {% endif %}
+                                <i class="fas fa-calendar-check fa-2x mb-3 text-success d-block"></i>
+                                <h6 class="fw-bold mb-1">Jurys & Planning</h6>
+                                <p class="small text-muted mb-0">Proposer des jurys et fixer les dates.</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-history text-primary me-2"></i>Derniers enregistrements</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <tbody>
+                                {% for d in derniers_etudiants %}
+                                <tr>
+                                    <td class="ps-4 py-3">
+                                        <div class="fw-bold small">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</div>
+                                        <div class="text-muted x-small text-truncate" style="max-width: 250px;">{{ d.theme|default:"Sans thème" }}</div>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <span class="badge bg-light text-dark border x-small">{{ d.etudiant.classe.nom }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="2" class="text-center py-5 text-muted">Aucun dossier trouvé.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-center py-3">
+                    <a href="{% url 'administration:liste_themes_etudiants' %}" class="btn btn-link text-primary text-decoration-none fw-bold small">Voir toute la liste</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

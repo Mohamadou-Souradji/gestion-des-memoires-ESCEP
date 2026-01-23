@@ -1,0 +1,291 @@
+{% extends 'base_chef.html' %}
+{% block content %}
+<div class="container-fluid">
+    {% if messages %}
+    <div class="row">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
+                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold" style="color: var(--escep-blue);">Gestion des Thèmes & Stages</h4>
+        <button class="btn btn-primary rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTheme">
+            <i class="fas fa-plus-circle me-2"></i>Nouveau Thème
+        </button>
+    </div>
+
+    <div class="card p-3 mb-4 border-0 shadow-sm rounded-4">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted">Année Scolaire</label>
+                <select name="annee" class="form-select" onchange="this.form.submit()">
+                    <option value="">Toutes les années...</option>
+                    {% for a in annees_scolaires %}
+                    <option value="{{a.id}}" {% if request.GET.annee == a.id|stringformat:"s" %}selected{% endif %}>{{ a.libelle }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted">Filière</label>
+                <select name="filiere" class="form-select" onchange="this.form.submit()">
+                    <option value="">Toutes les filières...</option>
+                    {% for f in filieres %}
+                    <option value="{{f.id}}" {% if request.GET.filiere == f.id|stringformat:"s" %}selected{% endif %}>{{f.nom}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted">Classe</label>
+                <select name="classe" class="form-select" onchange="this.form.submit()">
+                    <option value="">Toutes les classes...</option>
+                    {% for c in classes %}
+                    <option value="{{c.id}}" {% if request.GET.classe == c.id|stringformat:"s" %}selected{% endif %}>{{c.nom}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="small fw-bold text-muted">Recherche</label>
+                <input type="text" name="search" class="form-control" placeholder="Nom ou matricule..." value="{{request.GET.search}}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-dark w-100 rounded-3"><i class="fas fa-search"></i></button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">Étudiant</th>
+                    <th>Classe / Année</th>
+                    <th>Thème</th>
+                    <th>Encadrement</th>
+                    <th class="text-center">Vague</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in dossiers %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="fw-bold" id="name-{{d.id}}">{{d.etudiant.nom}} {{d.etudiant.prenom}}</div>
+                        <small class="text-muted">Mat: {{d.etudiant.matricule}}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary">{{d.etudiant.classe.nom}}</span><br>
+                        <small class="text-muted">{{ d.etudiant.annee.libelle }}</small>
+                    </td>
+                    <td class="small" style="max-width: 200px;">{{d.theme|default:"---"}}</td>
+                    <td class="small">
+                        <i class="fas fa-user-tie text-muted me-1"></i>{{d.encadreur|default:"-"}}<br>
+                        <i class="fas fa-map-marker-alt text-muted me-1"></i>{{d.lieu_stage|default:"-"}}
+                    </td>
+                    <td class="text-center">
+                        {% if d.vague %}
+                            <span class="badge bg-success rounded-pill px-3">{{ d.vague.libelle }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary rounded-pill px-3 mb-1">Hors Vague</span>
+                            {% if vague_active %}
+                            <br><a href="{% url 'administration:inscrire_vague_unitaire' d.id %}" class="small fw-bold text-decoration-none">Inscrire</a>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-sm btn-white border" onclick="editTheme('{{d.id}}', '{{d.etudiant.matricule}}', '{{d.theme|escapejs}}', '{{d.encadreur|escapejs}}', '{{d.lieu_stage|escapejs}}', '{{d.etudiant.nom}} {{d.etudiant.prenom}}')">
+                                <i class="fas fa-edit text-info"></i>
+                            </button>
+                            <a href="{% url 'administration:supprimer_dossier_chef' d.id %}" class="btn btn-sm btn-white border" onclick="return confirm('Supprimer ce dossier ?')">
+                                <i class="fas fa-trash text-danger"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center py-5 text-muted">Aucun résultat trouvé.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTheme" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form method="POST" action="{% url 'administration:enregistrer_theme_etudiant' %}" class="modal-content border-0 shadow">
+            {% csrf_token %}
+            <input type="hidden" name="dossier_id" id="edit_dossier_id">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold">Formulaire Dossier</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-danger">1. Année Scolaire</label>
+                        <select id="modal_annee" class="form-select border-danger">
+                            <option value="">Choisir l'année...</option>
+                            {% for a in annees_scolaires %}<option value="{{a.id}}">{{ a.libelle }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">2. Filière</label>
+                        <select id="modal_filiere" class="form-select">
+                            <option value="">Choisir la filière...</option>
+                            {% for f in filieres %}<option value="{{f.id}}">{{f.nom}}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">3. Classe</label>
+                        <select id="modal_classe" class="form-select">
+                            <option value="">---</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-primary">4. Étudiant</label>
+                        <select name="etudiant_matricule" id="modal_etudiant" class="form-select border-primary" required>
+                            <option value="">---</option>
+                        </select>
+                    </div>
+                    <hr>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Sujet du mémoire</label>
+                        <textarea name="theme" id="modal_theme_input" class="form-control" rows="2" required></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Encadreur</label>
+                        <input type="text" name="encadreur" id="modal_encadreur_input" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Lieu de stage</label>
+                        <input type="text" name="lieu_stage" id="modal_lieu_input" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" id="btnSubmit" class="btn btn-primary rounded-pill px-5" disabled>Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+// --- 1. CHARGEMENT DES CLASSES (Dépend de la Filière) ---
+document.getElementById('modal_filiere').addEventListener('change', function() {
+    const filiereId = this.value;
+    const classeSelect = document.getElementById('modal_classe');
+    const etudiantSelect = document.getElementById('modal_etudiant');
+    
+    // Réinitialisation des sous-menus
+    classeSelect.innerHTML = '<option value="">Chargement...</option>';
+    etudiantSelect.innerHTML = '<option value="">---</option>';
+
+    if (!filiereId) {
+        classeSelect.innerHTML = '<option value="">---</option>';
+        return;
+    }
+
+    console.log("Recherche des classes pour la filière ID:", filiereId);
+
+    fetch(`/administration/get-classes/${filiereId}/`)
+        .then(r => {
+            if (!r.ok) throw new Error("Erreur serveur (404 ou 500)");
+            return r.json();
+        })
+        .then(data => {
+            console.log("Classes reçues:", data);
+            let html = '<option value="">Choisir la classe...</option>';
+            data.forEach(c => {
+                html += `<option value="${c.id}">${c.nom}</option>`;
+            });
+            classeSelect.innerHTML = html;
+        })
+        .catch(err => {
+            console.error("Erreur lors de la récupération des classes:", err);
+            classeSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+        });
+});
+
+// --- 2. CHARGEMENT DES ÉTUDIANTS (Dépend de Classe + Année) ---
+const updateEtudiants = () => {
+    const cId = document.getElementById('modal_classe').value;
+    const aId = document.getElementById('modal_annee').value;
+    const etudiantSelect = document.getElementById('modal_etudiant');
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    if (cId && aId) {
+        etudiantSelect.innerHTML = '<option value="">Chargement...</option>';
+        console.log(`Recherche étudiants: Classe=${cId}, Année=${aId}`);
+
+        fetch(`/administration/get-etudiants-par-classe-et-annee/${cId}/${aId}/`)
+            .then(r => r.json())
+            .then(data => {
+                console.log("Étudiants reçus:", data);
+                let html = '<option value="">Choisir l\'étudiant...</option>';
+                data.forEach(e => {
+                    html += `<option value="${e.matricule}">${e.nom} ${e.prenom}</option>`;
+                });
+                etudiantSelect.innerHTML = html;
+            })
+            .catch(err => {
+                console.error("Erreur lors de la récupération des étudiants:", err);
+                etudiantSelect.innerHTML = '<option value="">Erreur</option>';
+            });
+    } else {
+        etudiantSelect.innerHTML = '<option value="">---</option>';
+        btnSubmit.disabled = true;
+    }
+};
+
+document.getElementById('modal_classe').addEventListener('change', updateEtudiants);
+document.getElementById('modal_annee').addEventListener('change', updateEtudiants);
+
+// Activer le bouton d'envoi uniquement si un étudiant est sélectionné
+document.getElementById('modal_etudiant').addEventListener('change', function() {
+    document.getElementById('btnSubmit').disabled = !this.value;
+});
+
+// --- 3. FONCTION D'ÉDITION (Modification d'un thème existant) ---
+function editTheme(id, mat, theme, enc, lieu, nomComplet) {
+    document.getElementById('edit_dossier_id').value = id;
+    document.getElementById('modal_theme_input').value = theme;
+    document.getElementById('modal_encadreur_input').value = enc;
+    document.getElementById('modal_lieu_input').value = lieu;
+    
+    // Affichage propre du nom de l'étudiant
+    document.getElementById('modal_etudiant').innerHTML = `<option value="${mat}" selected>${nomComplet}</option>`;
+    
+    // Verrouillage pour éviter de changer l'étudiant de classe/année par erreur
+    document.getElementById('modal_annee').disabled = true;
+    document.getElementById('modal_filiere').disabled = true;
+    document.getElementById('modal_classe').disabled = true;
+    document.getElementById('btnSubmit').disabled = false;
+
+    const modal = new bootstrap.Modal(document.getElementById('modalTheme'));
+    modal.show();
+}
+
+// --- 4. RÉINITIALISATION DU MODAL (Lors de la fermeture) ---
+document.getElementById('modalTheme').addEventListener('hidden.bs.modal', function () {
+    const form = this.querySelector('form');
+    form.reset();
+    
+    document.getElementById('edit_dossier_id').value = "";
+    document.getElementById('modal_annee').disabled = false;
+    document.getElementById('modal_filiere').disabled = false;
+    document.getElementById('modal_classe').disabled = false;
+    document.getElementById('btnSubmit').disabled = true;
+    
+    document.getElementById('modal_classe').innerHTML = '<option value="">---</option>';
+    document.getElementById('modal_etudiant').innerHTML = '<option value="">---</option>';
+});
+</script>
+{% endblock %}

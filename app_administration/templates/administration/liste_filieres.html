@@ -1,0 +1,129 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h2 style="color: var(--escep-blue);"><i class="fas fa-graduation-cap me-2"></i>Gestion des Filières</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow border-0">
+            <div class="card-header text-white" style="background-color: var(--escep-blue);">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Nouvelle Filière</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nom complet</label>
+                        <input type="text" name="nom" class="form-control" placeholder="Ex: Génie Logiciel" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Code Filière</label>
+                        <input type="text" name="code" class="form-control" placeholder="Ex: GL" required>
+                    </div>
+                      {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Département Parent</label>
+                        <select name="departement" class="form-select border-primary" required>
+                            <option value="">Choisir un département...</option>
+                            {% for d in departements %}
+                            <option value="{{ d.id }}">{{ d.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn w-100 fw-bold shadow-sm" style="background-color: var(--escep-yellow); color: var(--escep-blue);">
+                        <i class="fas fa-save me-2"></i>ENREGISTRER
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow border-0">
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0 text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4 text-start">Code & Nom</th>
+                            <th>Département</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in filieres %}
+                        <tr>
+                            <td class="ps-4 text-start">
+                                <span class="fw-bold" style="color: var(--escep-blue);">{{ f.code }}</span><br>
+                                <small class="text-muted">{{ f.nom }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-outline-primary border text-primary px-3">
+                                    {{ f.departement.nom }}
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+    <div class="btn-group shadow-sm">
+        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editFiliere{{ f.id }}">
+            <i class="fas fa-edit"></i>
+        </button>
+        
+        <a href="{% url 'administration:supprimer_filiere' f.pk %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Supprimer cette filière ?')">
+            <i class="fas fa-trash-alt"></i>
+        </a>
+    </div>
+</td>
+
+<div class="modal fade" id="editFiliere{{ f.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header text-white" style="background-color: var(--escep-blue);">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Modifier Filière : {{ f.code }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'administration:modifier_filiere' f.id %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body text-start">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Département</label>
+                        <select name="departement" class="form-select" required>
+                            {% for d in departements %}
+                            <option value="{{ d.id }}" {% if d.id == f.departement.id %}selected{% endif %}>
+                                {{ d.nom }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Code</label>
+                        <input type="text" name="code" class="form-control" value="{{ f.code }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nom de la filière</label>
+                        <input type="text" name="nom" class="form-control" value="{{ f.nom }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn fw-bold" style="background-color: var(--escep-yellow); color: var(--escep-blue);">
+                        METTRE À JOUR
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="py-5 text-muted text-center">Aucune filiere enregistree.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

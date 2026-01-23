@@ -1,0 +1,110 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h2 style="color: var(--escep-blue);"><i class="fas fa-layer-group me-2"></i>Gestion des Classes</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow border-0">
+            <div class="card-header text-white" style="background-color: var(--escep-blue);">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Nouvelle Classe</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Filière</label>
+                        <select name="filiere" class="form-select" required>
+                            <option value="">Sélectionner la filière...</option>
+                            {% for f in filieres %}
+                            <option value="{{ f.id }}">{{ f.code }} - {{ f.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Code Classe</label>
+                        <input type="text" name="code" class="form-control" placeholder="Ex: L3GL" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nom complet</label>
+                        <input type="text" name="nom" class="form-control" placeholder="Ex: Licence 3 Génie Logiciel" required>
+                    </div>
+                    <button type="submit" class="btn w-100 fw-bold shadow-sm" style="background-color: var(--escep-yellow); color: var(--escep-blue);">
+                        <i class="fas fa-save me-2"></i>ENREGISTRER
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow border-0 text-center">
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4 text-start">Code & Nom</th>
+                            <th>Filière</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in classes %}
+                        <tr>
+                            <td class="ps-4 text-start">
+                                <span class="fw-bold" style="color: var(--escep-blue);">{{ c.code }}</span><br>
+                                <small class="text-muted">{{ c.nom }}</small>
+                            </td>
+                            <td><span class="badge border text-dark">{{ c.filiere.code }}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editClasse{{ c.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <a href="#" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash-alt"></i></a>
+                            </td>
+                        </tr>
+
+                        <div class="modal fade" id="editClasse{{ c.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content border-0">
+                                    <div class="modal-header text-white" style="background-color: var(--escep-blue);">
+                                        <h5 class="modal-title">Modifier {{ c.code }}</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form action="{% url 'administration:modifier_classe' c.id %}" method="POST">
+                                        {% csrf_token %}
+                                        <div class="modal-body text-start">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Filière</label>
+                                                <select name="filiere" class="form-select">
+                                                    {% for f in filieres %}
+                                                    <option value="{{ f.id }}" {% if f.id == c.filiere.id %}selected{% endif %}>{{ f.code }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Code</label>
+                                                <input type="text" name="code" class="form-control" value="{{ c.code }}">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Nom</label>
+                                                <input type="text" name="nom" class="form-control" value="{{ c.nom }}">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer border-0">
+                                            <button type="submit" class="btn fw-bold" style="background-color: var(--escep-yellow); color: var(--escep-blue);">VALIDER</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'base_chef.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-4 rounded-4" style="border-left: 5px solid var(--escep-blue) !important;">
+                <h6 class="text-muted text-uppercase small fw-bold">Dossiers Mémoire</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="fw-bold mb-0">{{ dossiers_count }}</h2>
+                    <i class="fas fa-file-alt fa-2x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-4 rounded-4" style="border-left: 5px solid #ffc107 !important;">
+                <h6 class="text-muted text-uppercase small fw-bold">Thèmes en attente</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="fw-bold mb-0">{{ themes_attente }}</h2>
+                    <i class="fas fa-hourglass-half fa-2x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-4 rounded-4" style="border-left: 5px solid #198754 !important;">
+                <h6 class="text-muted text-uppercase small fw-bold">Vague Active</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-success">{{ vague_active.libelle|default:"Aucune" }}</h6>
+                    <i class="fas fa-calendar-check fa-2x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <div class="p-5 bg-white rounded-5 shadow-sm border">
+                <h2 class="fw-bold" style="color: var(--escep-blue);">Prêt pour une nouvelle saisie ?</h2>
+                <p class="text-muted mb-4">Enregistrez les thèmes, encadreurs et lieux de stage pour vos étudiants.</p>
+                <a href="{% url 'administration:gestion_memoires_chef' %}" class="btn btn-primary px-5 py-3 fw-bold rounded-pill">
+                    <i class="fas fa-plus-circle me-2"></i> GÉRER LES DOSSIERS
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

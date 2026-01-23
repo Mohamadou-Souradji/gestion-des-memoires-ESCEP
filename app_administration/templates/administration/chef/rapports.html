@@ -1,0 +1,119 @@
+{% extends 'base_chef.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="card-header bg-primary bg-gradient text-white p-4 text-center">
+            <h3 class="mb-0 fw-bold"><i class="fas fa-print me-3"></i>Génération des Rapports Officiels</h3>
+            <p class="mb-0 opacity-75">Sélectionnez le type de document et le format d'exportation</p>
+        </div>
+
+        <div class="card-body p-4 p-lg-5 bg-white">
+            <form action="{% url 'administration:exporter_rapport_complet' %}" method="GET">
+                <div class="row justify-content-center">
+                    <div class="col-md-10">
+                        
+                        <div class="mb-5 text-center">
+                            <label class="h5 fw-bold mb-3 d-block text-muted">Que voulez-vous générer ?</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="type" id="type_themes" value="themes" checked onclick="toggleUI()">
+                                <label class="btn btn-outline-primary py-3 fw-bold shadow-sm" for="type_themes">
+                                    <i class="fas fa-book-open me-2"></i>LISTE DES THÈMES
+                                </label>
+
+                                <input type="radio" class="btn-check" name="type" id="type_planning" value="planning" onclick="toggleUI()">
+                                <label class="btn btn-outline-primary py-3 fw-bold shadow-sm" for="type_planning">
+                                    <i class="fas fa-calendar-check me-2"></i>PLANNING PUBLIC
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="row g-4 border rounded-4 p-4 bg-light shadow-sm">
+                            <div class="col-md-6" id="div_vague" style="display: none;">
+                                <label class="form-label fw-bold text-primary"><i class="fas fa-layer-group me-1"></i>Session (Vague)</label>
+                                <select name="vague" class="form-select border-0 shadow-sm">
+                                    {% for v in vagues %}
+                                    <option value="{{ v.id }}">{{ v.libelle }} ({{ v.date_creation.year }})</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text text-danger small"><i class="fas fa-info-circle me-1"></i>Filtre obligatoire pour le planning.</div>
+                            </div>
+
+                            <div class="col-md-6" id="div_annee">
+                                <label class="form-label fw-bold text-primary"><i class="fas fa-graduation-cap me-1"></i>Année Scolaire</label>
+                                <select name="annee" class="form-select border-0 shadow-sm">
+                                    {% for a in toutes_les_annees %}
+                                    <option value="{{ a.id }}">{{ a.libelle }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-primary"><i class="fas fa-tags me-1"></i>Filière</label>
+                                <select name="filiere" class="form-select border-0 shadow-sm">
+                                    <option value="">Toutes les filières</option>
+                                    {% for f in filieres %}
+                                    <option value="{{ f.id }}">{{ f.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-5">
+                            <label class="h5 fw-bold mb-3 d-block text-center text-muted">Choisir le format d'exportation</label>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <button type="submit" name="format" value="excel" class="btn btn-success btn-lg w-100 rounded-pill shadow py-3 fw-bold transition-hover">
+                                        <i class="fas fa-file-excel me-2"></i> TÉLÉCHARGER EN EXCEL
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="submit" name="format" value="word" class="btn btn-primary btn-lg w-100 rounded-pill shadow py-3 fw-bold transition-hover">
+                                        <i class="fas fa-file-word me-2"></i> GÉNÉRER DOCUMENT WORD
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Effet au survol des boutons */
+    .transition-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
+        transition: all 0.3s ease;
+    }
+    .btn-check:checked + .btn-outline-primary {
+        background-color: var(--bs-primary);
+        color: white;
+    }
+</style>
+
+<script>
+/**
+ * Alterne l'affichage des champs selon le type de document sélectionné
+ */
+function toggleUI() {
+    const isPlanning = document.getElementById('type_planning').checked;
+    const divVague = document.getElementById('div_vague');
+    const divAnnee = document.getElementById('div_annee');
+
+    if (isPlanning) {
+        divVague.style.display = 'block';
+        divAnnee.style.display = 'none';
+    } else {
+        divVague.style.display = 'none';
+        divAnnee.style.display = 'block';
+    }
+}
+
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', toggleUI);
+</script>
+{% endblock %}

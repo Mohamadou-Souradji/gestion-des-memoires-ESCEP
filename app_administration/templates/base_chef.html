@@ -1,0 +1,176 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chef Dept | ESCEP-NIGER</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --escep-blue: #003366; --escep-yellow: #FFCC00; --sidebar-width: 260px; }
+        body { background: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+
+        .sidebar {
+            background: var(--escep-blue);
+            min-height: 100vh;
+            color: white;
+            width: var(--sidebar-width);
+            position: fixed;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .sidebar-header {
+            background: white;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 3px solid var(--escep-yellow);
+        }
+        .sidebar-logo {
+            max-width: 80%;
+            max-height: 70px;
+            object-fit: contain;
+        }
+
+        .nav-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: rgba(255,255,255,0.4);
+            margin: 20px 20px 8px;
+            font-weight: bold;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            margin: 2px 12px;
+            border-radius: 8px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            transition: 0.2s;
+            text-decoration: none;
+        }
+        .nav-link i { width: 30px; font-size: 1.1rem; }
+        .nav-link:hover, .nav-link.active {
+            background: var(--escep-yellow);
+            color: var(--escep-blue) !important;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .main { margin-left: var(--sidebar-width); padding: 0; min-height: 100vh; }
+        .topbar {
+            background: white;
+            padding: 12px 25px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+        .content-body { padding: 25px; }
+
+        .badge-dept {
+            background: rgba(0, 51, 102, 0.05);
+            color: var(--escep-blue);
+            padding: 6px 15px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border: 1.5px solid var(--escep-blue);
+        }
+
+        .messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar shadow">
+        <div class="sidebar-header">
+            <img src="{% static 'img/logo_escep.png' %}" alt="Logo ESCEP" class="sidebar-logo">
+        </div>
+
+        <nav class="nav flex-column mt-3">
+            <div class="nav-section-title">Général</div>
+            <a class="nav-link {% if 'accueil' in request.path %}active{% endif %}" href="{% url 'administration:accueil_chef' %}">
+                <i class="fas fa-th-large"></i> Dashboard
+            </a>
+
+            <div class="nav-section-title">Phase de Stage</div>
+            <a class="nav-link {% if 'themes' in request.path %}active{% endif %}" href="{% url 'administration:liste_themes_etudiants' %}">
+                <i class="fas fa-book"></i> Thèmes & Stages
+            </a>
+<li class="nav-item">
+    <a class="nav-link {% if 'chef/vagues' in request.path %}active{% endif %}"
+       href="{% url 'administration:chef_liste_vagues' %}">
+        <i class="fas fa-layer-group me-2"></i>
+        <span>Vagues de Soutenance</span>
+    </a>
+</li>
+            <div class="nav-section-title">Phase de Soutenance</div>
+            <a class="nav-link {% if 'planning' in request.path %}active{% endif %}" href="{% url 'administration:planning_liste_vagues' %}">
+                <i class="fas fa-calendar-alt"></i> Planning Soutenances
+            </a>
+            <a class="nav-link {% if 'jurys' in request.path %}active{% endif %}" href="{% url 'administration:liste_jurys_chef' %}">
+                <i class="fas fa-gavel"></i> Gestion des Jurys
+            </a>
+
+            <div class="nav-section-title">Analyses & Documents</div>
+            <a class="nav-link {% if 'rapports' in request.path %}active{% endif %}" href="{% url 'administration:page_rapport_chef' %}">
+                <i class="fas fa-file-export"></i> Générer Rapports
+            </a>
+
+            <div class="nav-section-title">Compte</div>
+            <a class="nav-link text-danger mt-3" href="{% url 'app_auth:logout' %}">
+                <i class="fas fa-power-off"></i> Déconnexion
+            </a>
+        </nav>
+    </div>
+
+    <div class="main">
+        <div class="topbar shadow-sm">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-university text-muted me-2"></i>
+                <span class="badge-dept text-uppercase">
+                    DEPARTEMENT : {{ request.user.departement.nom }}
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center">
+                <div class="text-end me-3 d-none d-md-block">
+                    <div class="fw-bold mb-0" style="font-size: 0.85rem; color: var(--escep-blue);">
+                        {{ request.user.first_name }} {{ request.user.last_name }}
+                    </div>
+                    <small class="text-muted" style="font-size: 0.7rem;">Chef de Département</small>
+                </div>
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                    <i class="fas fa-user-tie"></i>
+                </div>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="content-body">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

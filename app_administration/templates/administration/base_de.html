@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESCEP NIGER - Administration</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    
+    <style>
+        :root {
+            --escep-blue: #2e5eb7;    /* Bleu du logo */
+            --escep-yellow: #f2e300;  /* Jaune du logo */
+            --escep-red: #d93025;     /* Rouge du logo */
+            --escep-light: #f8f9fa;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Sidebar Style */
+        .sidebar {
+            min-height: 100vh;
+            background-color: var(--escep-blue);
+            color: white;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .logo-section {
+            background-color: white;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 5px solid var(--escep-yellow);
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+            padding: 12px 20px;
+            transition: all 0.3s;
+            border-left: 5px solid transparent;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            border-left: 5px solid var(--escep-yellow);
+        }
+
+        .nav-link.active {
+            background-color: rgba(0, 0, 0, 0.2);
+            color: white !important;
+            border-left: 5px solid var(--escep-yellow);
+        }
+
+        .nav-link i {
+            width: 25px;
+        }
+
+        /* Main Content */
+        .top-bar {
+            background-color: white;
+            height: 70px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .btn-escep-blue {
+            background-color: var(--escep-blue);
+            color: white;
+        }
+
+        .btn-escep-yellow {
+            background-color: var(--escep-yellow);
+            color: #333;
+            border: none;
+        }
+
+        .text-escep-red {
+            color: var(--escep-red);
+        }
+
+        /* Badge personnalise */
+        .badge-escep {
+            background-color: var(--escep-yellow);
+            color: black;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar p-0">
+            <div class="logo-section">
+                {% load static %}
+                <img src="{% static 'img/logo_escep.png' %}" alt="Logo ESCEP" class="img-fluid">
+            </div>
+            
+            <div class="pt-4">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_de' %}active{% endif %}" href="{% url 'administration:dashboard_de' %}">
+                            <i class="fas fa-th-large"></i> Tableau de bord
+                        </a>
+                    </li>
+
+                    <div class="px-3 mt-3 mb-2 text-uppercase small opacity-50 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Structure</div>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'annees' in request.path %}active{% endif %}" href="{% url 'administration:liste_annees' %}">
+                            <i class="fas fa-calendar-alt"></i> Années Scolaires
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'departements' in request.path %}active{% endif %}" href="{% url 'administration:liste_departements' %}">
+                            <i class="fas fa-sitemap"></i> Départements
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'filieres' in request.path %}active{% endif %}" href="{% url 'administration:liste_filieres' %}">
+                            <i class="fas fa-book"></i> Filières 
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'classes' in request.path %}active{% endif %}" href="{% url 'administration:liste_classes' %}">
+                            <i class="fas fa-layer-group"></i> Classes
+                        </a>
+                    </li>
+
+                    <div class="px-3 mt-3 mb-2 text-uppercase small opacity-50 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Soutenances</div>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'vagues' in request.path %}active{% endif %}" href="{% url 'administration:liste_vagues' %}">
+                            <i class="fas fa-calendar-check"></i> Vagues de mémoire
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'validation' in request.path %}active{% endif %}" href="{% url 'administration:validation_jury_liste' %}">
+                            <i class="fas fa-user-check"></i> Validation Jurys
+                            {% if nb_attente_validation > 0 %}
+                                <span class="badge rounded-pill bg-danger ms-1" style="font-size: 0.6rem;">{{ nb_attente_validation }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+
+      
+
+                    <div class="px-3 mt-3 mb-2 text-uppercase small opacity-50 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Utilisateurs</div>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'chefs' in request.path %}active{% endif %}" href="{% url 'administration:liste_chefs' %}">
+                            <i class="fas fa-user-tie"></i> Chefs de Départements
+                        </a>
+                    </li>
+
+                    <li class="nav-item mt-5">
+                        <a class="nav-link text-escep-red" href="/admin/logout/">
+                            <i class="fas fa-power-off"></i> Déconnexion
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 p-0">
+            <div class="top-bar justify-content-between">
+                <span class="fw-bold text-secondary">SYSTÈME DE GESTION DES MÉMOIRES</span>
+                <div class="user-info">
+                    <span class="badge bg-light text-dark p-2 border">
+                        <i class="fas fa-user-circle text-escep-blue me-1"></i> 
+                        Directeur des Études
+                    </span>
+                </div>
+            </div>
+
+            <div class="p-4">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
+                            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

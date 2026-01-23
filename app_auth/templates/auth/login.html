@@ -1,0 +1,154 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESCEP | Connexion Portail</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --escep-blue: #002347;
+            --escep-yellow: #FFD700;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--escep-blue) 0%, #004080 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 420px;
+            overflow: hidden; /* Important pour que le logo suive l'arrondi */
+            border-bottom: 5px solid var(--escep-yellow);
+        }
+
+        /* Nouvelle section pour le logo plein écran */
+        .header-logo {
+            background: white;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .logo-escep {
+            width: 40%; /* Le logo prend toute la place disponible */
+            max-width: 250px; /* Mais on limite pour ne pas qu'il soit trop géant */
+            height: auto;
+            object-fit: contain;
+        }
+
+        .login-content {
+            padding: 30px 40px 40px 40px;
+            text-align: center;
+        }
+
+        h2 {
+            color: var(--escep-blue);
+            font-weight: 700;
+            margin-bottom: 5px;
+            font-size: 22px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 25px;
+            display: block;
+        }
+
+        .input-group-text {
+            background: #f8f9fa;
+            border-right: none;
+            color: var(--escep-blue);
+        }
+
+        .form-control {
+            border-left: none;
+            background: #f8f9fa;
+            padding: 12px;
+        }
+
+        .btn-login {
+            background: var(--escep-blue);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            width: 100%;
+            transition: 0.3s;
+        }
+
+        .btn-login:hover {
+            background: #003a75;
+            color: var(--escep-yellow);
+        }
+
+        .footer-text {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="header-logo">
+            <img src="{% static 'img/logo_escep.png' %}" alt="Logo ESCEP" class="logo-escep">
+        </div>
+
+        <div class="login-content">
+            <h2>Portail ESCEP</h2>
+            <span class="subtitle">Gestion des Mémoires & Soutenances</span>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger py-2 small">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input type="text" name="username" class="form-control" placeholder="Utilisateur" required>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <input type="password" name="password" class="form-control" placeholder="Mot de passe" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-login">
+                    CONNEXION <i class="fas fa-sign-in-alt ms-2"></i>
+                </button>
+            </form>
+
+            <div class="footer-text">
+                &copy; 2026 ESCEP Niger <br>
+                <small>République du Niger</small>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

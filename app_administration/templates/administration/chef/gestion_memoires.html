@@ -1,0 +1,102 @@
+{% extends 'base_chef.html' %}
+{% block content %}
+<div class="container-fluid">
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="fw-bold text-primary mb-0"><i class="fas fa-plus-circle me-2"></i>Nouvelle Saisie de Thème</h5>
+        </div>
+        <div class="card-body p-4">
+            <form action="{% url 'administration:enregistrer_theme_chef' %}" method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Filière</label>
+                        <select id="select-filiere" class="form-select border-2">
+                            <option value="">Choisir...</option>
+                            {% for f in filieres %}
+                                <option value="{{ f.id }}">{{ f.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Classe</label>
+                        <select id="select-classe" class="form-select border-2" disabled>
+                            <option>Sélectionnez une filière</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Étudiant</label>
+                        <select id="select-etudiant" name="matricule" class="form-select border-2" disabled required>
+                            <option>Sélectionnez une classe</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <label class="small fw-bold">Thème du mémoire</label>
+                        <textarea name="theme" class="form-control" rows="2" required></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small fw-bold">Encadreur (Professeur)</label>
+                        <input type="text" name="encadreur" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small fw-bold">Lieu de stage</label>
+                        <input type="text" name="lieu_stage" class="form-control">
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill">Valider le dossier</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Étudiant</th>
+                        <th>Thème</th>
+                        <th>Encadreur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in derniers_dossiers %}
+                    <tr>
+                        <td class="ps-4"><strong>{{ d.etudiant.nom }}</strong></td>
+                        <td>{{ d.theme|truncatechars:50 }}</td>
+                        <td>{{ d.encadreur }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Code JS pour charger les classes puis les étudiants
+document.getElementById('select-filiere').onchange = function() {
+    let fId = this.value;
+    let cls = document.getElementById('select-classe');
+    cls.innerHTML = '<option>Chargement...</option>';
+    fetch(`/administration/api/classes/${fId}/`).then(r => r.json()).then(data => {
+        cls.innerHTML = '<option value="">Choisir la classe</option>';
+        data.forEach(c => cls.innerHTML += `<option value="${c.id}">${c.nom}</option>`);
+        cls.disabled = false;
+    });
+};
+
+document.getElementById('select-classe').onchange = function() {
+    let cId = this.value;
+    let etd = document.getElementById('select-etudiant');
+    etd.innerHTML = '<option>Chargement...</option>';
+    fetch(`/administration/api/etudiants/${cId}/`).then(r => r.json()).then(data => {
+        etd.innerHTML = '<option value="">Choisir l\'étudiant</option>';
+        data.forEach(e => etd.innerHTML += `<option value="${e.matricule}">${e.matricule} - ${e.nom}</option>`);
+        etd.disabled = false;
+    });
+};
+</script>
+{% endblock %}

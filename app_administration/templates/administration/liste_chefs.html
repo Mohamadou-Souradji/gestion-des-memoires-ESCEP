@@ -1,0 +1,138 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h2 style="color: var(--escep-blue);"><i class="fas fa-user-shield me-2"></i>Chefs de Départements</h2>
+        <button class="btn fw-bold shadow-sm" style="background-color: var(--escep-yellow); color: var(--escep-blue);" data-bs-toggle="modal" data-bs-target="#modalCreer">
+            <i class="fas fa-plus-circle me-1"></i> Nouveau Chef
+        </button>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead class="table-light text-uppercase small fw-bold">
+                    <tr>
+                        <th class="text-start ps-4">Utilisateur (Login)</th>
+                        <th>Département</th>
+                        <th>Adresse Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in chefs %}
+                    <tr>
+                        <td class="text-start ps-4 fw-bold" style="color: var(--escep-blue);">
+                            <i class="fas fa-user-circle me-2 text-muted"></i>{{ c.username }}
+                        </td>
+                        <td>
+                            <span class="badge bg-info-subtle text-info border border-info px-3">
+                                {{ c.departement.nom|default:"Non assigné" }}
+                            </span>
+                        </td>
+                        <td class="text-muted">{{ c.email }}</td>
+                        <td>
+                            <div class="btn-group shadow-sm">
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEdit{{ c.id }}" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            
+                                <a href="{% url 'administration:supprimer_chef' c.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Supprimer ce compte ?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="modalEdit{{ c.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content border-0">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">Modifier : {{ c.username }}</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="user_id" value="{{ c.id }}">
+                                    <div class="modal-body text-start">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Département</label>
+                                            <select name="departement" class="form-select">
+                                                {% for d in departements %}
+                                                <option value="{{ d.id }}" {% if d.id == c.departement.id %}selected{% endif %}>{{ d.nom }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Login</label>
+                                            <input type="text" name="username" class="form-control" value="{{ c.username }}" placeholder="Ex: chef_informatique">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Email</label>
+                                            <input type="email" name="email" class="form-control" value="{{ c.email }}" placeholder="Ex: contact@escep.ne">
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" name="modifier_infos" class="btn btn-primary fw-bold">METTRE À JOUR</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCreer" tabindex="-1">
+    <div class="modal-dialog shadow-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header text-white" style="background-color: var(--escep-blue);">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Nouveau Compte Chef</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Département d'attache</label>
+                        <select name="departement" class="form-select border-primary" required>
+                            <option value="" selected disabled>Choisir un département...</option>
+                            {% for d in departements %}
+                            <option value="{{ d.id }}">{{ d.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nom d'utilisateur</label>
+                        <input type="text" name="username" class="form-control" placeholder="Ex: chef_telecom" required>
+                        <div class="form-text text-muted small">C'est l'identifiant de connexion.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Adresse Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="Ex: chef.telecom@escep.ne" required>
+                    </div>
+
+                    <div class="mb-3 border-top pt-3">
+                        <label class="form-label fw-bold ">Mot de passe </label>
+                        <input type="password" name="password" class="form-control border-danger" placeholder="8 caractères minimum" required minlength="8">
+                        <div class="form-text text-danger fw-bold small">
+                            <i class="fas fa-shield-alt me-1"></i> Obligatoire : 8 caractères minimum.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" name="creer_chef" class="btn fw-bold w-100 py-2" style="background-color: var(--escep-yellow); color: var(--escep-blue);">
+                        CONFIRMER LA CRÉATION
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

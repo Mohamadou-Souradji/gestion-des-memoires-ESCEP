@@ -1,0 +1,49 @@
+{% extends 'base_direction.html' %}
+{% block content %}
+<div class="container-fluid">
+    <h4 class="fw-bold mb-4">Validations de Jury en attente</h4>
+    <div class="card border-0 shadow-sm">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-dark text-white">
+                <tr>
+                    <th>Étudiant</th>
+                    <th>Thème proposé</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in propositions %}
+                <tr>
+                    <td>{{ p.dossier.etudiant.nom }} {{ p.dossier.etudiant.prenom }}</td>
+                    <td>{{ p.dossier.theme }}</td>
+                    <td class="text-center">
+                        <form action="{% url 'administration:decision_directeur' p.id %}" method="POST" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="VALIDER">
+                            <button type="submit" class="btn btn-sm btn-success">Valider</button>
+                        </form>
+                        <button class="btn btn-sm btn-danger" onclick="showRejet('{{p.id}}')">Rejeter</button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center py-4">Aucune proposition en attente.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function showRejet(id) {
+    let raison = prompt("Motif du rejet :");
+    if (raison) {
+        let form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/administration/direction/decision/' + id + '/';
+        form.innerHTML = `{% csrf_token %}<input type="hidden" name="action" value="REJETER"><input type="hidden" name="motif_rejet" value="${raison}">`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

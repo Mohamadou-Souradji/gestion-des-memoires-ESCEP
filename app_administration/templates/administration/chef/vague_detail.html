@@ -1,0 +1,189 @@
+{% extends 'base_chef.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'administration:chef_liste_vagues' %}" class="btn btn-light rounded-circle shadow-sm me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h4 class="fw-bold mb-0">{{ vague.libelle }}</h4>
+                <small class="text-muted">Session académique {{ vague.date_creation|date:"Y" }}</small>
+            </div>
+            {% if not peut_modifier and not peut_reouvrir %}
+                <span class="badge bg-secondary ms-3">Terminée (Délai dépassé)</span>
+            {% elif peut_reouvrir %}
+                <span class="badge bg-warning text-dark ms-3">Clôturée par vos soins</span>
+            {% endif %}
+        </div>
+
+        <div class="d-flex gap-2">
+            {% if peut_reouvrir %}
+                <a href="{% url 'administration:chef_toggle_cloture' vague.id %}" 
+                   class="btn btn-warning rounded-pill px-4 shadow-sm">
+                    <i class="fas fa-unlock me-2"></i>Réouvrir ma session
+                </a>
+            {% elif peut_modifier %}
+                <a href="{% url 'administration:chef_toggle_cloture' vague.id %}" 
+                   class="btn btn-danger rounded-pill px-4 shadow-sm"
+                   onclick="return confirm('Voulez-vous clôturer cette session pour votre département ?')">
+                    <i class="fas fa-lock me-2"></i>Clôturer ma session
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="alert alert-info border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center">
+        <i class="fas fa-info-circle me-3 fa-lg text-primary"></i>
+        <div>
+            <span class="fw-bold">Note sur l'éligibilité :</span> 
+            Seuls les étudiants ayant validé leur <strong>pré-dépôt numérique</strong> apparaissent dans cette liste.
+        </div>
+    </div>
+
+    <div class="card p-3 mb-4 border-0 shadow-sm rounded-4">
+        <form method="GET" class="row g-2">
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted ps-1">Filière</label>
+                <select name="filiere" id="filiere_select" class="form-select border-0 bg-light">
+                    <option value="">Toutes</option>
+                    {% for f in filieres %}
+                        <option value="{{f.id}}" {% if request.GET.filiere == f.id|stringformat:"s" %}selected{% endif %}>{{f.nom}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted ps-1">Classe</label>
+                <select name="classe" id="classe_select" class="form-select border-0 bg-light">
+                    <option value="">Toutes</option>
+                    {% for c in classes_du_dept %}
+                        <option value="{{c.id}}" {% if request.GET.classe == c.id|stringformat:"s" %}selected{% endif %}>{{c.nom}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted ps-1">Année Scolaire</label>
+                <select name="annee" class="form-select border-0 bg-light">
+                    <option value="">Toutes</option>
+                    {% for a in annees_scolaires %}
+                        <option value="{{a.id}}" {% if request.GET.annee == a.id|stringformat:"s" %}selected{% endif %}>{{a.libelle}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="small fw-bold text-muted ps-1">Recherche</label>
+                <input type="text" name="search" class="form-control border-0 bg-light" placeholder="Nom ou matricule..." value="{{request.GET.search}}">
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end gap-1">
+                <button type="submit" class="btn btn-dark w-100 rounded-pill">
+                    <i class="fas fa-filter me-2"></i>Filtrer
+                </button>
+                <a href="{% url 'administration:chef_detail_vague' vague.id %}" class="btn btn-light rounded-pill">
+                    <i class="fas fa-undo"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <table class="table align-middle mb-0">
+            <thead class="bg-light text-muted">
+                <tr>
+                    <th class="ps-4">Étudiant</th>
+                    <th>Filière & Classe</th>
+                    <th>Année Scolaire</th>
+                    <th class="text-center">Pré-dépôt</th>
+                    <th class="text-center">Action / Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in dossiers %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="fw-bold text-dark">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</div>
+                        <small class="text-muted font-monospace">{{ d.etudiant.matricule }}</small>
+                    </td>
+                    <td>
+                        <div class="small fw-bold">{{ d.etudiant.classe.filiere.nom }}</div>
+                        <span class="badge bg-light text-secondary border">{{ d.etudiant.classe.nom }}</span>
+                    </td>
+                    <td>
+                        <span class="text-dark">{{ d.etudiant.annee.libelle }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-success-subtle text-success border-0 px-3">
+                            <i class="fas fa-check-circle me-1"></i> Validé
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        {% if peut_modifier %}
+                            {% if d.vague == vague %}
+                                <div class="btn-group shadow-sm rounded-pill overflow-hidden border">
+                                    <span class="btn btn-sm btn-success px-3 pe-none">Inscrit</span>
+                                    <a href="{% url 'administration:chef_annuler_inscription' d.id vague.id %}" 
+                                       class="btn btn-sm btn-white text-danger border-start" 
+                                       title="Annuler l'inscription"
+                                       onclick="return confirm('Retirer cet étudiant de la session ?')">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                </div>
+                            {% else %}
+                                <a href="{% url 'administration:chef_inscrire_vague' d.id vague.id %}"
+                                   class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-bold">
+                                   Ajouter à la vague
+                                </a>
+                            {% endif %}
+                        {% else %}
+                             {% if d.vague == vague %}
+                                <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">Inscrit (Session Close)</span>
+                             {% else %}
+                                <span class="text-muted small">Non inscrit</span>
+                             {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <div class="mb-3">
+                            <i class="fas fa-user-clock fa-3x opacity-25"></i>
+                        </div>
+                        <h5>Aucun dossier éligible trouvé</h5>
+                        <p class="small mb-0">Vérifiez les filtres ou assurez-vous que les pré-dépôts ont été validés.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// Script pour charger dynamiquement les classes selon la filière
+document.getElementById('filiere_select').addEventListener('change', function() {
+    const filiereId = this.value;
+    const classeSelect = document.getElementById('classe_select');
+    classeSelect.innerHTML = '<option value="">Chargement...</option>';
+
+    if (!filiereId) {
+        classeSelect.innerHTML = '<option value="">Toutes</option>';
+        return;
+    }
+
+    fetch(`/administration/get-classes/${filiereId}/`)
+        .then(response => response.json())
+        .then(data => {
+            let html = '<option value="">Toutes</option>';
+            data.forEach(classe => {
+                html += `<option value="${classe.id}">${classe.nom}</option>`;
+            });
+            classeSelect.innerHTML = html;
+        });
+});
+</script>
+{% endblock %}

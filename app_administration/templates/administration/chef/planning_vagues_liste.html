@@ -1,0 +1,82 @@
+{% extends 'base_chef.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h4 class="fw-bold text-dark">Planning des Soutenances</h4>
+        <p class="text-muted small">Sélectionnez une vague pour proposer des jurys et programmer les dates.</p>
+    </div>
+
+    {% if vagues %}
+        {# On regroupe les vagues par l'année de leur création #}
+        {% regroup vagues by date_creation.year as vagues_par_annee %}
+
+        {% for annee in vagues_par_annee %}
+            <div class="mb-5">
+                <div class="d-flex align-items-center mb-3">
+                    <h5 class="fw-bold mb-0 text-primary">{{ annee.grouper }}</h5>
+                    <div class="flex-grow-1 ms-3 border-bottom opacity-25"></div>
+                </div>
+
+                <div class="row g-3">
+                    {% for v in annee.list %}
+                    <div class="col-md-4 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 hover-lift transition">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="badge bg-light text-primary border rounded-pill px-3">
+                                        Session {{ v.date_creation|date:"M" }}
+                                    </span>
+                                    {% if v.est_active_generale %}
+                                        <span class="badge bg-success-subtle text-success rounded-pill px-2 small">En cours</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 small">Archive</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <h6 class="fw-bold text-dark mb-1">{{ v.libelle }}</h6>
+                                
+                                <div class="mt-2 mb-4">
+                                    <small class="text-muted d-block">
+                                        <i class="far fa-calendar-check me-1"></i> 
+                                        Soutenances du {{ v.date_ouverture|date:"d/m" }} au {{ v.date_fermeture|date:"d/m/Y" }}
+                                    </small>
+                                </div>
+
+                                <div class="mt-auto">
+                                    <a href="{% url 'administration:planning_vague_detail' v.id %}" 
+                                       class="btn btn-primary w-100 rounded-pill btn-sm fw-bold">
+                                        Ouvrir le planning <i class="fas fa-arrow-right ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="card border-0 shadow-sm rounded-4 py-5 text-center">
+            <div class="card-body">
+                <i class="fas fa-calendar-times fa-3x text-light mb-3"></i>
+                <h5 class="text-muted">Aucune vague de soutenance disponible</h5>
+                <p class="small text-secondary">Contactez le Directeur des Études pour créer une session.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+    }
+    .transition {
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}

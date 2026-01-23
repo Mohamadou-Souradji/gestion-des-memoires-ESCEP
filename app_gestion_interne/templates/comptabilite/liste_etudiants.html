@@ -1,0 +1,157 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comptabilité | ESCEP-NIGER</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --escep-blue: #003366; --escep-yellow: #FFCC00; }
+        body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+
+        /* Navigation Horizontale */
+        .navbar-escep { background: white; border-bottom: 3px solid var(--escep-yellow); padding: 10px 0; }
+        .navbar-logo { height: 60px; object-fit: contain; }
+
+        .top-info-bar { background: var(--escep-blue); color: white; padding: 8px 0; font-size: 0.85rem; }
+
+        .card-main { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); background: white; }
+
+        /* Filtres */
+        .filter-section { background: white; border-radius: 12px; padding: 20px; border: 1px solid #eee; }
+        .form-label-custom { font-size: 0.75rem; font-weight: bold; color: var(--escep-blue); text-transform: uppercase; }
+
+        /* Tableau */
+        .table thead { background: var(--escep-blue); color: white; }
+        .table thead th { border: none; padding: 15px; font-weight: 500; font-size: 0.85rem; }
+        .status-badge { font-size: 0.7rem; padding: 6px 12px; border-radius: 50px; font-weight: bold; }
+        .badge-paye { background: #e8f5e9; color: #2e7d32; }
+        .badge-attente { background: #fff8e1; color: #f57f17; }
+
+        .btn-validate { background: #2e7d32; color: white; border-radius: 50px; font-size: 0.8rem; font-weight: bold; padding: 5px 15px; border: none; }
+        .btn-cancel { background: #c62828; color: white; border-radius: 50px; font-size: 0.8rem; font-weight: bold; padding: 5px 15px; border: none; }
+        .btn-validate:hover, .btn-cancel:hover { opacity: 0.9; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="top-info-bar">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-cash-register me-2"></i> SESSION DE VALIDATION DES FRAIS</span>
+            <span><i class="fas fa-user-circle me-1"></i> {{ request.user.username }} | <a href="{% url 'app_auth:logout' %}" class="text-warning text-decoration-none fw-bold">DÉCONNEXION</a></span>
+        </div>
+    </div>
+
+    <nav class="navbar-escep shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <img src="{% static 'img/logo_escep.png' %}" alt="Logo ESCEP" class="navbar-logo">
+            <div class="text-end">
+                <h5 class="mb-0 fw-bold" style="color: var(--escep-blue);">ESPACE COMPTABILITÉ</h5>
+                <small class="text-muted">Gestion des inscriptions aux soutenances</small>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+
+        <div class="filter-section mb-4 shadow-sm">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label-custom">Recherche Étudiant</label>
+                    <input type="text" name="search" class="form-control border-0 bg-light rounded-3" placeholder="Nom ou Matricule..." value="{{ request.GET.search|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-custom">Filière</label>
+                    <select name="filiere" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
+                        <option value="">-- Sélectionner --</option>
+                        {% for f in filieres %}
+                        <option value="{{ f.id }}" {% if request.GET.filiere == f.id|stringformat:"s" %}selected{% endif %}>{{ f.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label-custom">Classe</label>
+                    <select name="classe" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
+                        <option value="">-- Sélectionner --</option>
+                        {% for c in classes %}
+                        <option value="{{ c.id }}" {% if request.GET.classe == c.id|stringformat:"s" %}selected{% endif %}>{{ c.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label-custom">Année Acad.</label>
+                    <select name="annee" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
+                        <option value="">-- Sélectionner --</option>
+                        {% for a in annees %}
+                        <option value="{{ a.id }}" {% if request.GET.annee == a.id|stringformat:"s" %}selected{% endif %}>{{ a.libelle }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <a href="?" class="btn btn-dark w-100 rounded-3 shadow-sm"><i class="fas fa-sync-alt me-2"></i>RESET</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-main overflow-hidden">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">MATRICULE & NOM</th>
+                            <th>FILIÈRE / CLASSE</th>
+                            <th class="text-center">ÉTAT PAIEMENT</th>
+                            <th class="text-center">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in etudiants %}
+                        <tr>
+                            <td class="ps-4 py-3">
+                                <div class="fw-bold text-dark mb-0">{{ e.nom }} {{ e.prenom }}</div>
+                                <code class="small text-primary fw-bold">{{ e.matricule }}</code>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark small">{{ e.classe.filiere.code }}</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">{{ e.classe.nom }}</div>
+                            </td>
+                            <td class="text-center">
+                                {% if e.dossier.is_inscription_validee %}
+                                    <span class="status-badge badge-paye"><i class="fas fa-check-circle me-1"></i> PAYÉ</span>
+                                {% else %}
+                                    <span class="status-badge badge-attente"><i class="fas fa-clock me-1"></i> EN ATTENTE</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if e.dossier.is_soutenu %}
+                                    <span class="text-muted small"><i class="fas fa-lock me-1"></i> Verrouillé (Soutenu)</span>
+                                {% else %}
+                                    <a href="{% url 'app_gestion_interne:toggle_inscription' e.matricule %}"
+                                       class="btn {% if e.dossier.is_inscription_validee %}btn-cancel{% else %}btn-validate{% endif %} shadow-sm">
+                                        {% if e.dossier.is_inscription_validee %}ANNULER{% else %}VALIDER{% endif %}
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="fas fa-search fa-2x mb-3 d-block opacity-25"></i>
+                                Aucun étudiant trouvé pour ces critères.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-4 text-muted small">
+        &copy; 2026 ESCEP-NIGER | Système de Gestion des Soutenances
+    </footer>
+
+</body>
+</html>

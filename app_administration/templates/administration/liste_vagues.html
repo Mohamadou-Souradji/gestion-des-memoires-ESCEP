@@ -1,0 +1,136 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h2 style="color: var(--escep-blue);"><i class="fas fa-calendar-check me-2"></i>Gestion des Vagues</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow border-0 rounded-4">
+            <div class="card-header text-white rounded-top-4 py-3" style="background-color: var(--escep-blue);">
+                <h5 class="mb-0 small fw-bold text-uppercase">Nouvelle Vague</h5>
+            </div>
+            <div class="card-body">
+                {% if vague_en_cours %}
+                    <div class="alert alert-warning border-0 shadow-sm rounded-3 py-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-lock me-2 fs-4"></i>
+                            <strong class="small">SESSION BLOQUÉE</strong>
+                        </div>
+                        <p class="small mb-0">La <b>{{ vague_en_cours.libelle }}</b> est en cours. Clôturez-la manuellement dans le tableau pour en ouvrir une nouvelle.</p>
+                    </div>
+                    <button class="btn btn-secondary w-100 fw-bold rounded-pill opacity-50" disabled>LANCER IMPOSSIBLE</button>
+                {% else %}
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Nom de la Vague</label>
+                            <select name="libelle" class="form-select border-0 bg-light" required>
+                                <option value="Première vague">Première vague</option>
+                                <option value="Deuxième vague">Deuxième vague</option>
+                                <option value="Troisième vague">Troisième vague</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Années Scolaires</label>
+                            <div class="border rounded p-2 bg-light shadow-sm" style="max-height: 120px; overflow-y: auto;">
+                                {% for annee in toutes_les_annees %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="annees_concernees" value="{{ annee.id }}" id="annee_{{ annee.id }}">
+                                    <label class="form-check-label small" for="annee_{{ annee.id }}">{{ annee.libelle }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6 mb-3">
+                                <label class="form-label fw-bold small text-muted text-uppercase" style="font-size: 0.65rem;">Ouverture</label>
+                                <input type="datetime-local" name="date_ouverture" class="form-control border-0 bg-light" required>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label fw-bold small text-muted text-uppercase" style="font-size: 0.65rem;">Fermeture</label>
+                                <input type="datetime-local" name="date_fermeture" class="form-control border-0 bg-light" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn w-100 fw-bold shadow-sm rounded-pill mt-2" style="background-color: var(--escep-yellow); color: var(--escep-blue);">
+                            LANCER LA VAGUE
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow border-0 rounded-4 overflow-hidden">
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0 text-center">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="text-start ps-4">Vague</th>
+                            <th>Période</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in vagues %}
+                        <tr>
+                            <td class="text-start ps-4">
+                                <span class="fw-bold d-block">{{ v.libelle }}</span>
+                                {% for annee in v.annees_concernees.all %}
+                                    <small class="text-primary x-small fw-bold">#{{ annee.libelle }}</small>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <div class="x-small fw-medium text-muted">
+                                    {{ v.date_ouverture|date:"d M Y" }} au {{ v.date_fermeture|date:"d M Y" }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if v.est_cloturee %}
+                                    <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3">Clôturée</span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 anim-pulse">En cours</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-1">
+                                    <button class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#editVague{{ v.id }}">
+                                        <i class="fas fa-edit text-muted"></i>
+                                    </button>
+                                    
+                                    {% if not v.est_cloturee %}
+                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clotureVague{{ v.id }}">
+                                        <i class="fas fa-lock"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+
+                        <div class="modal fade" id="clotureVague{{ v.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered modal-sm">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-body p-4 text-center">
+                                        <div class="text-danger mb-3"><i class="fas fa-exclamation-circle fa-3x"></i></div>
+                                        <h6 class="fw-bold">Clôturer cette session ?</h6>
+                                        <p class="small text-muted">Cela libérera le système pour ouvrir une nouvelle vague.</p>
+                                        <form action="{% url 'administration:cloturer_vague' v.id %}" method="POST">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger w-100 rounded-pill fw-bold">OUI, CLÔTURER</button>
+                                            <button type="button" class="btn btn-light w-100 rounded-pill mt-2 small" data-bs-dismiss="modal">ANNULER</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,317 @@
+{% extends 'base_chef.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{% url 'administration:planning_liste_vagues' %}" class="btn btn-light rounded-circle me-3 shadow-sm">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <h4 class="fw-bold mb-0">Planning : {{ vague.libelle }}</h4>
+            <small class="text-muted">Inscriptions de la vague en cours</small>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end mb-3">
+    <form action="{% url 'administration:tout_cocher_soutenu' vague.id %}" method="POST" onsubmit="return confirm('Marquer TOUS les étudiants programmés comme soutenus ?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-dark rounded-pill">
+            <i class="fas fa-check-double me-2"></i> Tout marquer comme "Soutenu"
+        </button>
+    </form>
+</div>
+
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <table class="table align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">Étudiant / Classe</th>
+                    <th>Jury Actuel</th>
+                    <th>Statut DE</th>
+                    <th class="text-center">État de Soutenance</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in dossiers %}
+                <tr>
+                    <td class="ps-4">
+                        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetails{{d.id}}">
+                            <div class="fw-bold text-primary">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</div>
+                        </a>
+                        <span class="badge bg-light text-dark border small">{{ d.etudiant.classe.nom }}</span>
+                    </td>
+                    <td>
+                        {% if d.soutenance %}
+                            <div class="small">
+                                <span class="text-muted">P:</span> {{ d.soutenance.president.nom|default:"-" }}<br>
+                                <span class="text-muted">R:</span> {{ d.soutenance.rapporteur.nom|default:"-" }}
+                            </div>
+                        {% else %}
+                            <span class="text-muted small italic">Aucun jury proposé</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not d.soutenance %}
+                            <span class="badge bg-light text-muted">Vierge</span>
+                        {% elif d.soutenance.status == 'PROPOSE' %}
+                            <span class="badge bg-warning-subtle text-warning">Attente Validation</span>
+                        {% elif d.soutenance.status == 'VALIDE' %}
+                            <span class="badge bg-success-subtle text-success">Validé (Prêt)</span>
+                        {% elif d.soutenance.status == 'REJETE' %}
+                            <span class="badge bg-danger-subtle text-danger" title="{{ d.soutenance.motif_rejet }}">Rejeté</span>
+                        {% elif d.soutenance.status == 'PROGRAMME' %}
+                            <span class="badge bg-primary-subtle text-primary">Programmée</span>
+                        {% endif %}
+                    </td>
+                    <th class="text-center">État de Soutenance</th>
+
+<td class="text-center">
+    {% if d.soutenance and d.soutenance.status == 'PROGRAMME' %}
+        <div class="form-check form-switch d-inline-block">
+            <input class="form-check-input btn-update-soutenu" type="checkbox" 
+                   role="switch" id="soutenu{{d.id}}" 
+                   data-id="{{d.id}}"
+                   {% if d.is_soutenu %}checked{% endif %}>
+            <label class="form-check-label small fw-bold {% if d.is_soutenu %}text-success{% else %}text-muted{% endif %}" for="soutenu{{d.id}}">
+                {% if d.is_soutenu %}Soutenu{% else %}En attente{% endif %}
+            </label>
+        </div>
+    {% else %}
+        <span class="badge bg-light text-muted border">Non programmée</span>
+    {% endif %}
+</td>
+                    <td class="text-center">
+                        {% if not d.soutenance or d.soutenance.status == 'REJETE' %}
+                            <button class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalJury{{d.id}}">
+                                Proposer Jury
+                            </button>
+                        {% elif d.soutenance.status == 'VALIDE' %}
+                            <button class="btn btn-sm btn-success rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalPlan{{d.id}}">
+                                Programmer
+                            </button>
+                        {% elif d.soutenance.status == 'PROGRAMME' %}
+                             <button class="btn btn-sm btn-outline-secondary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalDetails{{d.id}}">
+                                Détails / Modifier
+                            </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% for d in dossiers %}
+    <div class="modal fade" id="modalJury{{d.id}}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <form action="{% url 'administration:proposer_soutenance' %}" method="POST" class="jury-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="dossier_id" value="{{d.id}}">
+                    <div class="modal-header border-0 bg-light">
+                        <h5 class="fw-bold m-0">Jury pour {{ d.etudiant.nom }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        {% if d.soutenance.status == 'REJETE' %}
+                        <div class="alert alert-danger border-0 small shadow-sm mb-4">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Motif du rejet (DE) :</strong><br>
+                            {{ d.soutenance.motif_rejet|default:"Aucune raison précisée." }}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted">Président</label>
+                            <select name="president" class="form-select bg-light border-0 jury-select" required>
+                                <option value="">Sélectionnez...</option>
+                                {% for j in jurys %}<option value="{{j.id}}">{{j.nom}} {{j.prenom}}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted">Rapporteur</label>
+                            <select name="rapporteur" class="form-select bg-light border-0 jury-select" required>
+                                <option value="">Sélectionnez...</option>
+                                {% for j in jurys %}<option value="{{j.id}}">{{j.nom}} {{j.prenom}}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-0">
+                            <label class="small fw-bold text-muted">Examinateur (Optionnel)</label>
+                            <select name="examinateur" class="form-select bg-light border-0 jury-select">
+                                <option value="">Aucun</option>
+                                {% for j in jurys %}<option value="{{j.id}}">{{j.nom}} {{j.prenom}}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <p class="text-danger small mt-2 d-none error-msg">Veuillez choisir au moins 2 membres différents.</p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Envoyer pour Validation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalPlan{{d.id}}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <form action="{% url 'administration:enregistrer_planning' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="soutenance_id" value="{{d.soutenance.id}}">
+                    <div class="modal-header border-0 bg-success text-white">
+                        <h5 class="fw-bold m-0">Programmer la soutenance</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="small fw-bold">Date</label>
+                                <input type="date" name="date" class="form-control bg-light border-0" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="small fw-bold">Heure</label>
+                                <input type="time" name="heure" class="form-control bg-light border-0" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="small fw-bold">Salle / Lieu</label>
+                                <input type="text" name="salle" class="form-control bg-light border-0" placeholder="Ex: Salle 104" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="submit" class="btn btn-success w-100 rounded-pill py-2">Enregistrer le Planning</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalDetails{{d.id}}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <form action="{% url 'administration:enregistrer_planning' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="soutenance_id" value="{{d.soutenance.id}}">
+                    <div class="modal-header border-0 bg-dark text-white">
+                        <h5 class="fw-bold m-0">Fiche de soutenance : {{ d.etudiant.prenom }}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-muted small text-uppercase mb-2">Thème du mémoire</h6>
+                            <p class="mb-0 fw-medium">{{ d.theme|default:"Non renseigné" }}</p>
+                        </div>
+                        <hr class="opacity-10">
+                        
+                        <h6 class="fw-bold text-muted small text-uppercase mb-3">Informations logistiques</h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="small fw-bold">Date</label>
+                                <input type="date" name="date" class="form-control bg-light border-0" value="{{ d.soutenance.date|date:'Y-m-d' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="small fw-bold">Heure</label>
+                                <input type="time" name="heure" class="form-control bg-light border-0" value="{{ d.soutenance.heure|time:'H:i' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="small fw-bold">Salle / Lieu</label>
+                                <input type="text" name="salle" class="form-control bg-light border-0" value="{{ d.soutenance.salle }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        {% if d.soutenance.status == 'PROGRAMME' %}
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2">Mettre à jour les informations</button>
+                        {% else %}
+                        <button type="button" class="btn btn-secondary w-100 rounded-pill py-2" data-bs-dismiss="modal">Fermer</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
+<script>
+// Validation Jury
+document.querySelectorAll('.jury-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        const selects = this.querySelectorAll('.jury-select');
+        const errorMsg = this.querySelector('.error-msg');
+        const selectedValues = Array.from(selects).map(s => s.value).filter(v => v !== "");
+        const uniqueValues = new Set(selectedValues);
+
+        if (uniqueValues.size < 2) {
+            e.preventDefault();
+            errorMsg.classList.remove('d-none');
+            this.closest('.modal-content').classList.add('shake');
+            setTimeout(() => this.closest('.modal-content').classList.remove('shake'), 500);
+        }
+    });
+});
+document.querySelectorAll('.btn-update-soutenu').forEach(switchEl => {
+    switchEl.addEventListener('change', function() {
+        const dossierId = this.dataset.id;
+        const isChecked = this.checked;
+        const label = this.nextElementSibling;
+
+        fetch("{% url 'administration:modifier_etat_soutenu' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                "dossier_id": dossierId,
+                "etat": isChecked
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                label.innerText = isChecked ? "Soutenu" : "En attente";
+                label.className = isChecked ? "form-check-label small fw-bold text-success" : "form-check-label small fw-bold text-muted";
+            }
+        });
+    });
+});
+
+document.querySelectorAll('.btn-switch-soutenu').forEach(switchEl => {
+    switchEl.addEventListener('change', function() {
+        const dossierId = this.dataset.id;
+        const isChecked = this.checked;
+        const label = this.nextElementSibling;
+
+        fetch("{% url 'administration:modifier_etat_soutenu' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ "dossier_id": dossierId, "etat": isChecked })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                label.innerText = isChecked ? "Soutenu" : "En attente";
+                label.className = isChecked ? "small fw-bold text-success" : "small fw-bold text-muted";
+            } else {
+                alert("Erreur lors de la mise à jour");
+                this.checked = !isChecked; // Annule le changement visuel
+            }
+        });
+    });
+});
+</script>
+
+<style>
+    .shake { animation: shake 0.5s; }
+    @keyframes shake {
+        0%, 100% {transform: translateX(0);}
+        25% {transform: translateX(-10px);}
+        75% {transform: translateX(10px);}
+    }
+</style>
+{% endblock %}
