@@ -6,8 +6,11 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = 'django-insecure-v+9o)kff83%rx-#x@trd2h^a7jg2y6h*2bw=mgjgq)#!y=bzep'
+# Utilisation d'une variable d'environnement pour la sécurité sur Render
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-v+9o)kff83%rx-#x@trd2h^a7jg2y6h*2bw=mgjgq)#!y=bzep')
+
 DEBUG = os.environ.get("DEBUG", "False") == "True"
+
 ALLOWED_HOSTS = ["*"]
 
 # Application definition
@@ -19,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # Vos applications
     'app_administration',
     'app_gestion_interne',
     'app_depots',
@@ -28,13 +32,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # <--- DOIT ÊTRE ICI (juste après SecurityMiddleware)
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # <--- AJOUTER ICI
 ]
 
 AUTH_USER_MODEL = 'app_auth.User'
@@ -43,7 +47,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')], # Recommandé d'ajouter un dossier templates global
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -58,10 +62,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+# Configuration de la base de données via DATABASE_URL de Render
 DATABASES = {
-    'default': dj_database_url.config(default=os.environ.get("DATABASE_URL"))
+    'default': dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        conn_max_age=600
+    )
 }
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -70,16 +77,22 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-LANGUAGE_CODE = 'fr-fr' # Mis en français
+LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Gestion des fichiers STATIQUES
-STATIC_URL = 'static/'
+# --- Gestion des fichiers STATIQUES ---
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# INDISPENSABLE : Le dossier où collectstatic va copier les fichiers pour la production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Utilisation de WhiteNoise pour servir les fichiers compressés
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-# Gestion des fichiers MEDIA (PDF des étudiants)
+
+# --- Gestion des fichiers MEDIA (PDF des étudiants) ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
