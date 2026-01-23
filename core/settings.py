@@ -1,13 +1,14 @@
 from pathlib import Path
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = 'django-insecure-v+9o)kff83%rx-#x@trd2h^a7jg2y6h*2bw=mgjgq)#!y=bzep'
-DEBUG = True
-ALLOWED_HOSTS = []
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 INSTALLED_APPS = [
@@ -57,15 +58,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_memoire',
-        'USER': 'user_memoire',
-        'PASSWORD': 'pass_memoire',
-        'HOST': 'db',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(default=os.environ.get("DATABASE_URL"))
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
