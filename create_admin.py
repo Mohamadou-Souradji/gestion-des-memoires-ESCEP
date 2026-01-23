@@ -1,44 +1,75 @@
 import os
 import django
+import random
 
+# Configuration de l'environnement Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from django.contrib.auth import get_user_model
-User = get_user_model()
+from app_administration.models import Classe, AnneeScolaire, Filiere, Departement
+from app_gestion_interne.models import Etudiant, DossierMemoire
 
-def create_users():
-    # Liste des utilisateurs à créer (Username, Role, Password)
-    users_to_create = [
-        ('admin_escep', 'DE', '1234'),
-        ('scolarite', 'SCOLARITE', '1234'),
-        ('comptable', 'COMPTABLE', '1234'),
-        ('surveillant', 'SURVEILLANT', '1234'),
-        ('bibliothecaire', 'BIBLIO', '1234'),
+def populate_students():
+    # --- 1. STRUCTURE ACADÉMIQUE (Basée sur tes images) ---
+    # Départements
+    dept_names = ["Economie Numerique", "Reseau telecom", "Reseau de Données et Securité", "Informatique"]
+    depts = {name: Departement.objects.get_or_create(nom=name)[0] for name in dept_names}
+
+    # Filières
+    filieres_data = [
+        {"code": "EN", "nom": "Economie Numerique", "dept": depts["Economie Numerique"]},
+        {"code": "BG", "nom": "Big Data", "dept": depts["Informatique"]},
+        {"code": "RDS", "nom": "Reseau de Données et Securité", "dept": depts["Reseau de Données et Securité"]},
+        {"code": "GL", "nom": "Genie logiciel", "dept": depts["Informatique"]},
     ]
+    f_objs = {f["code"]: Filiere.objects.get_or_create(code=f["code"], nom=f["nom"], departement=f["dept"])[0] for f in filieres_data}
 
-    for username, role, password in users_to_create:
-        if not User.objects.filter(username=username).exists():
-            print(f"Création de l'utilisateur : {username} ({role})...")
-            # Pour le premier (le DE), on en fait un superuser pour accéder à l'admin
-            if role == 'DE':
-                User.objects.create_superuser(
-                    username=username, 
-                    email=f"{username}@escep.com", 
-                    password=password,
-                    role=role
-                )
-            else:
-                User.objects.create_user(
-                    username=username, 
-                    email=f"{username}@escep.com", 
-                    password=password,
-                    role=role,
-                    is_staff=True # Permet de se connecter à l'interface admin si besoin
-                )
-            print(f"Utilisateur {username} créé.")
-        else:
-            print(f"L'utilisateur {username} existe déjà.")
+    # Classes
+    classes_data = [
+        {"code": "L3EN", "nom": "Licence 3 Economie numerique", "f": f_objs["EN"]},
+        {"code": "L3BD", "nom": "Licence 3 Big Data", "f": f_objs["BG"]},
+        {"code": "M2RDS", "nom": "Master 2 Réseaux de Données et Sécurité", "f": f_objs["RDS"]},
+        {"code": "M2GL", "nom": "Master 2 Genie logiciel", "f": f_objs["GL"]},
+        {"code": "L3RDS", "nom": "Licence 3 Réseau de donnée et securite", "f": f_objs["RDS"]},
+        {"code": "L3GL", "nom": "Licence 3 Génie logiciel", "f": f_objs["GL"]},
+    ]
+    c_objs = [Classe.objects.get_or_create(code=c["code"], nom=c["nom"], filiere=c["f"])[0] for c in classes_data]
+
+    # Années Académiques
+    annees_labels = ["2026-2027", "2025-2026", "2024-2025"]
+    a_objs = [AnneeScolaire.objects.get_or_create(libelle=label)[0] for label in annees_labels]
+
+    # --- 2. CRÉATION DES ÉTUDIANTS (10 par classe, Matricule 0010...) ---
+    noms = ["Abdou", "Ibrahim", "Moussa", "Souleymane", "Oumarou", "Sani", "Mamane", "Issaka", "Yacouba", "Salifou"]
+    prenoms = ["Mariam", "Fatouma", "Aissata", "Bachir", "Ousmane", "Nana", "Hadiza", "Hamissou", "Zalika", "Idrissa"]
+
+    sequence = 1
+    total_etudiants = 0
+
+    print("Insertion des 10 étudiants par classe...")
+    for classe in c_objs:
+        for _ in range(10):
+            # Formatage du matricule : 00101, 00102...
+            matricule = f"0010{sequence}"
+            
+            etudiant, created = Etudiant.objects.get_or_create(
+                matricule=matricule,
+                defaults={
+                    'nom': random.choice(noms),
+                    'prenom': random.choice(prenoms),
+                    'classe': classe,
+                    'annee': random.choice(a_objs)
+                }
+            )
+            
+            if created:
+                # IMPORTANT : Créer le dossier mémoire associé pour l'affichage comptable
+                DossierMemoire.objects.get_or_create(etudiant=etudiant)
+                total_etudiants += 1
+            
+            sequence += 1
+
+    print(f"Opération terminée : {total_etudiants} étudiants ajoutés.")
 
 if __name__ == "__main__":
-    create_users()
+    populate_students()
