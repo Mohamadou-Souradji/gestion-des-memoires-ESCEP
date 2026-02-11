@@ -3,10 +3,12 @@
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex align-items-center justify-content-between mb-4">
-        <h4 class="fw-bold text-dark mb-0" style="color: var(--escep-blue) !important;">
-            {{ vague.libelle }}
-        </h4>
-        <a href="{% url 'app_gestion_interne:scolarite_vagues_attestations' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm">
+        <div>
+            <h4 class="fw-bold text-dark mb-1" style="color: var(--escep-blue) !important;">
+                {{ vague.libelle }}
+            </h4>
+            <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i> Liste des étudiants ayant soutenu</p>
+        </div>
             <i class="fas fa-arrow-left me-1"></i> Retour aux vagues
         </a>
     </div>
@@ -14,6 +16,10 @@
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-3">
             <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="x-small-title ms-2">Recherche Nom/Matricule</label>
+                    <input type="text" name="search" class="form-control border-0 bg-light rounded-3" placeholder="Saisir un nom..." value="{{ request.GET.search|default:'' }}">
+                </div>
                 <div class="col-md-3">
                     <label class="x-small-title ms-2">Filière</label>
                     <select name="filiere" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
@@ -23,7 +29,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="x-small-title ms-2">Classe</label>
                     <select name="classe" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
                         <option value="">Toutes les classes</option>
@@ -32,8 +38,8 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="x-small-title ms-2">Année Académique</label>
+                <div class="col-md-2">
+                    <label class="x-small-title ms-2">Année Academique</label>
                     <select name="annee_acad" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
                         <option value="">Toutes les années</option>
                         {% for a in annees_options %}
@@ -41,10 +47,9 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <a href="?" class="btn btn-dark w-100 rounded-3 shadow-sm">
-                        <i class="fas fa-undo me-2"></i>Reinitialiser
-                    </a>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm mb-1">Filtrer</button>
+                    <a href="?" class="text-decoration-none x-small text-muted d-block text-center mt-1">Effacer les filtres</a>
                 </div>
             </form>
         </div>
@@ -58,37 +63,44 @@
                         <th class="ps-4 py-3">Matricule & Étudiant</th>
                         <th>Filière & Classe</th>
                         <th class="text-center">Année Académique</th>
-                        <th class="text-center">Statut</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for etudiant in etudiants %}
-                    <tr class="bg-white">
-                        <td class="ps-4">
-                            <div class="fw-bold text-dark">{{ etudiant.nom }} {{ etudiant.prenom }}</div>
-                            <small class="text-muted fw-bold">{{ etudiant.matricule }}</small>
-                        </td>
-                        <td>
-                            <div class="fw-bold text-primary small mb-0">{{ etudiant.classe.filiere.code }}</div>
-                            <div class="x-small text-secondary">{{ etudiant.classe.nom }}</div>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-light text-dark border px-3">{{ etudiant.annee.libelle }}</span>
-                        </td>
-                        <td class="text-center">
-                            <span class="text-success small fw-bold">
-                                <i class="fas fa-check-circle me-1"></i> Soutenu
-                            </span>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center py-5">
-                            <i class="fas fa-search fa-2x text-light mb-3 d-block"></i>
-                            <span class="text-muted">Aucun étudiant trouvé pour ces critères.</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                    {% if has_filter %}
+                        {% for etudiant in etudiants %}
+                        <tr class="bg-white">
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark text-uppercase">{{ etudiant.nom }} {{ etudiant.prenom }}</div>
+                                <code class="small text-primary fw-bold">{{ etudiant.matricule|slice:":4" }}</code>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-primary small mb-0">{{ etudiant.classe.filiere.code }}</div>
+                                <div class="x-small text-secondary">{{ etudiant.classe.nom }}</div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border px-3">{{ etudiant.annee.libelle }}</span>
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <i class="fas fa-search fa-2x text-light mb-3 d-block"></i>
+                                <span class="text-muted">Aucun étudiant soutenu trouvé pour cette recherche.</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="py-3">
+                                    <i class="fas fa-filter fa-3x text-light mb-3 d-block opacity-50"></i>
+                                    <h5 class="text-muted fw-normal">Sélectionnez une filière ou recherchez un nom</h5>
+                                    <p class="text-muted small">Pour optimiser l'affichage, veuillez filtrer la liste.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -98,6 +110,8 @@
 <style>
     .x-small-title { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; color: #6c757d; }
     .x-small { font-size: 0.7rem; }
-    .table thead th { font-size: 0.85rem; letter-spacing: 0.5px; }
+    .table thead th { font-size: 0.85rem; letter-spacing: 0.5px; border: none; }
+    .table tbody tr { border-bottom: 1px solid #f0f2f5; }
+    code { background: #eef2f7; padding: 2px 6px; border-radius: 4px; }
 </style>
 {% endblock %}

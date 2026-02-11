@@ -1,0 +1,66 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold text-primary">Supervision : Catalogue des Livres</h4>
+        <a href="{% url 'app_bibliotheque:ajouter_livre' %}?next={{ request.path }}" class="btn btn-primary rounded-pill shadow-sm">
+            <i class="fas fa-plus me-1"></i> Ajouter un ouvrage
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-2">
+                <div class="col-md-5">
+                    <input type="text" name="q" class="form-control border-0 bg-light shadow-none" placeholder="Titre, auteur ou ISBN..." value="{{ query }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="categorie" class="form-select border-0 bg-light shadow-none">
+                        <option value="">Toutes les catégories</option>
+                        {% for c in categories_list %}
+                        <option value="{{ c.id }}" {% if request.GET.categorie == c.id|stringformat:"i" %}selected{% endif %}>{{ c.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-dark w-100 rounded-3">Rechercher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {% for livre in livres %}
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden border-top border-4 {% if livre.is_publie %}border-success{% else %}border-warning{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge {% if livre.is_publie %}bg-success{% else %}bg-warning{% endif %}">
+                            {% if livre.is_publie %}En rayon{% else %}Brouillon{% endif %}
+                        </span>
+                        <small class="text-muted fw-bold">ISBN: {{ livre.isbn|default:"N/A" }}</small>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1">{{ livre.titre }}</h6>
+                    <p class="text-muted small mb-3"><i class="fas fa-pen-nib me-1"></i>{{ livre.auteur }}</p>
+
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'app_bibliotheque:modifier_livre' livre.pk %}?next={{ request.path }}" class="btn btn-sm btn-light border flex-fill fw-bold">
+                            <i class="fas fa-edit me-1"></i>Modifier
+                        </a>
+                        <a href="{% url 'app_bibliotheque:toggle_publication_livre' livre.pk %}" class="btn btn-sm {% if livre.is_publie %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
+                            <i class="fas fa-power-off"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-book-open fa-3x text-light mb-3"></i>
+            <p class="text-muted">Aucun livre ne correspond à votre recherche.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -7,23 +7,25 @@
     <title>Espace Scolarité | ESCEP-NIGER</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon_escep.png' %}">
+
     <style>
-        :root { 
-            --escep-blue: #003366; 
-            --escep-yellow: #FFCC00; 
-            --sidebar-width: 260px; 
+        :root {
+            --escep-blue: #003366;
+            --escep-yellow: #FFCC00;
+            --sidebar-width: 260px;
         }
         body { background: #f4f7f6; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
 
         /* Sidebar Style */
-        .sidebar { background: var(--escep-blue); min-height: 100vh; color: white; width: var(--sidebar-width); position: fixed; z-index: 1000; }
-        .sidebar-header { background: white; padding: 10px; text-align: center; border-bottom: 3px solid var(--escep-yellow); }
-        .sidebar-logo { max-width: 80%; max-height: 70px; object-fit: contain; }
+        .sidebar { background: var(--escep-blue); min-height: 100vh; color: white; width: var(--sidebar-width); position: fixed; z-index: 1000; transition: all 0.3s; }
+        .sidebar-header { background: white; padding: 15px; text-align: center; border-bottom: 3px solid var(--escep-yellow); }
+        .sidebar-logo { max-width: 80%; max-height: 60px; object-fit: contain; }
 
         /* Navigation */
         .nav-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.4); margin: 20px 20px 8px; font-weight: bold; }
-        .nav-link { color: rgba(255,255,255,0.8); margin: 2px 12px; border-radius: 8px; padding: 10px 15px; display: flex; align-items: center; font-size: 0.95rem; transition: 0.2s; text-decoration: none; }
-        .nav-link i { width: 30px; font-size: 1.1rem; }
+        .nav-link { color: rgba(255,255,255,0.8); margin: 2px 12px; border-radius: 8px; padding: 10px 15px; display: flex; align-items: center; font-size: 0.9rem; transition: 0.2s; text-decoration: none; }
+        .nav-link i { width: 25px; font-size: 1.1rem; }
         .nav-link:hover, .nav-link.active { background: var(--escep-yellow); color: var(--escep-blue) !important; font-weight: bold; }
 
         /* Main Content Area */
@@ -31,8 +33,10 @@
         .topbar { background: white; padding: 12px 25px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 999; }
         .content-body { padding: 25px; }
 
-        /* Alerts Custom */
-        .alert { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        /* Styles spécifiques aux tableaux scolarité */
+        .x-small-title { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; color: #6c757d; }
+        .table-scolarite thead { background: var(--escep-blue); color: white; }
+        .badge-matricule { background: #eef2f7; color: var(--escep-blue); font-family: monospace; font-weight: bold; padding: 4px 8px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -48,17 +52,16 @@
             </a>
 
             <div class="nav-section-title">Gestion Académique</div>
-            
-            <a class="nav-link {% if 'etudiants' in request.path %}active{% endif %}" 
+            <a class="nav-link {% if 'etudiants' in request.path and 'attestations' not in request.path %}active{% endif %}"
                href="{% url 'app_gestion_interne:scolarite_etudiants' %}">
                 <i class="fas fa-user-check"></i> Validation Semestres
             </a>
 
             <div class="nav-section-title">Archives & Soutenances</div>
-           <a class="nav-link {% if 'attestations' in request.path %}active{% endif %}"
-   href="{% url 'app_gestion_interne:scolarite_vagues_attestations' %}">
-    <i class="fas fa-certificate"></i> Attestations
-</a>
+            <a class="nav-link {% if 'attestations' in request.path %}active{% endif %}"
+               href="{% url 'app_gestion_interne:scolarite_detail_attestations' %}">
+                <i class="fas fa-certificate"></i> Attestations
+            </a>
 
             <div class="nav-section-title">Paramètres</div>
             <a class="nav-link text-warning mt-3" href="{% url 'app_auth:logout' %}">
@@ -69,34 +72,55 @@
 
     <div class="main">
         <div class="topbar shadow-sm">
-            <div class="fw-bold text-uppercase" style="color: var(--escep-blue);">
-                <i class="fas fa-graduation-cap me-2"></i> Service Scolarité
+            <div class="fw-bold text-uppercase d-flex align-items-center" style="color: var(--escep-blue);">
+                <i class="fas fa-graduation-cap me-2 fa-lg"></i>
+                <span>Service Scolarité</span>
+                {% if vague %} <span class="mx-2 text-muted">|</span> <span class="text-lowercase fw-normal text-muted">{{ vague.libelle }}</span>{% endif %}
             </div>
-            
-            <div class="d-flex align-items-center">
-                {% if messages %}
-                <div class="me-4">
-                    {% for message in messages %}
-                        <small class="text-{{ message.tags }} fw-bold"><i class="fas fa-info-circle"></i> {{ message }}</small>
-                    {% endfor %}
-                </div>
-                {% endif %}
 
+            <div class="d-flex align-items-center">
                 <div class="text-end me-3">
                     <div class="fw-bold mb-0" style="font-size: 0.85rem; color: var(--escep-blue);">{{ request.user.username }}</div>
                     <small class="text-muted" style="font-size: 0.7rem;">Agent de Scolarité</small>
                 </div>
                 <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
-                    <i class="fas fa-user-edit"></i>
+                    <i class="fas fa-user-shield"></i>
                 </div>
             </div>
         </div>
 
         <div class="content-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4" role="alert">
+                        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
             {% block content %}{% endblock %}
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const scrollPos = localStorage.getItem("scolarite_scroll");
+            if (scrollPos) {
+                window.scrollTo(0, scrollPos);
+                localStorage.removeItem("scolarite_scroll");
+            }
+        });
+
+        const actionButtons = document.querySelectorAll('.save-scroll');
+        actionButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                localStorage.setItem("scolarite_scroll", window.scrollY);
+            });
+        });
+    </script>
 </body>
 </html>

@@ -1,0 +1,98 @@
+{% extends 'administration/base_de.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .table-container { background: white; border-radius: 15px; overflow: hidden; }
+    .status-badge { font-size: 0.75rem; padding: 5px 12px; border-radius: 50px; font-weight: bold; }
+    .btn-action-valide { background-color: var(--escep-yellow); color: #003366; border: none; font-weight: bold; }
+    .btn-action-annule { background-color: #f8f9fa; color: #dc3545; border: 1px solid #dc3545; font-weight: bold; }
+    .x-small-title { font-size: 0.7rem; text-transform: uppercase; font-weight: bold; color: #6c757d; }
+</style>
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <h4 class="fw-bold mb-1" style="color: var(--escep-blue);">Supervision Superadmin : Comptabilité</h4>
+        <p class="text-muted small">Contrôle des inscriptions validées et des quitus financiers.</p>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="x-small-title ms-2">Recherche</label>
+                    <input type="text" name="search" class="form-control border-0 bg-light rounded-3" 
+                           placeholder="Nom ou Matricule" value="{{ request.GET.search|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="x-small-title ms-2">Filière</label>
+                    <select name="filiere" class="form-select border-0 bg-light rounded-3">
+                        <option value="">Toutes les filières</option>
+                        {% for f in filieres %}
+                            <option value="{{ f.id }}" {% if request.GET.filiere == f.id|stringformat:"s" %}selected{% endif %}>{{ f.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary flex-grow-1 rounded-3">Filtrer</button>
+                    <a href="?" class="btn btn-dark rounded-3"><i class="fas fa-sync-alt"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card table-container shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-hover">
+                <thead style="background: var(--escep-blue); color: white;">
+                    <tr>
+                        <th class="ps-4 py-3">Matricule</th>
+                        <th>Étudiant</th>
+                        <th>Classe</th>
+                        <th class="text-center">État Financier</th>
+                        <th class="text-center">Action DE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for etudiant in etudiants %}
+                    <tr class="bg-white">
+                        <td class="ps-4 fw-bold text-primary">{{ etudiant.matricule|slice:":4" }}</td>
+                        <td class="fw-bold text-dark text-uppercase small">{{ etudiant.nom }} {{ etudiant.prenom }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ etudiant.classe.nom }}</span></td>
+                        <td class="text-center">
+                            {% if etudiant.dossier.is_inscription_validee %}
+                                <span class="status-badge bg-success-subtle text-success">INSCRIPTION VALIDÉE</span>
+                            {% else %}
+                                <span class="status-badge bg-danger-subtle text-danger">NON VALIDÉE</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <form action="{% url 'gestion_interne:toggle_inscription' etudiant.matricule %}" method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                {% if etudiant.dossier.is_inscription_validee %}
+                                    <button type="submit" class="btn btn-sm btn-action-annule px-3 rounded-pill">Annuler</button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-sm btn-action-valide px-4 rounded-pill">Valider</button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fas fa-search fa-3x mb-3 opacity-25"></i><br>
+                            {% if not has_filter %}
+                                <strong>Veuillez effectuer une recherche pour consulter l'état financier.</strong>
+                            {% else %}
+                                Aucun résultat trouvé.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

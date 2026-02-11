@@ -3,57 +3,58 @@
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold" style="color: var(--escep-blue);">
-            <i class="fas fa-chart-pie me-2 text-warning"></i>Tableau de Bord Analytique
+        <h2 class="fw-bold mb-0" style="color: var(--escep-blue);">
+            <i class="fas fa-chart-line me-2 text-warning"></i>Tableau de Bord DE
         </h2>
-        <div class="text-end">
-            <span class="badge bg-white text-dark shadow-sm border p-2">
-                <i class="fas fa-calendar-day me-1 text-primary"></i> 2025-2026
-            </span>
-        </div>
+        <span class="badge bg-white text-dark shadow-sm border p-2 px-3 rounded-pill">
+            <i class="fas fa-calendar-check me-1 text-primary"></i> Session {% now "Y" %}
+        </span>
     </div>
 
     <div class="row g-4 mb-4">
         <div class="col-md-3">
             <div class="card border-0 shadow-sm rounded-4 text-white h-100" style="background-color: var(--escep-blue);">
                 <div class="card-body">
-                    <h6 class="text-uppercase opacity-75 small fw-bold">Départements</h6>
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Effectif Global</h6>
                     <div class="d-flex justify-content-between align-items-center">
-                        <h2 class="mb-0 fw-bold">{{ nb_depts }}</h2>
-                        <i class="fas fa-university fa-2x opacity-25"></i>
+                        <h2 class="mb-0 fw-bold">{{ nb_etudiants }}</h2>
+                        <i class="fas fa-users fa-2x opacity-25"></i>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white border-start border-success border-5">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Mémoires Terminés</h6>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0 fw-bold">{{ nb_soutenances }}</h2>
+                        <i class="fas fa-graduation-cap fa-2x text-success opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-md-3">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white border-start border-warning border-5">
                 <div class="card-body">
-                    <h6 class="text-muted text-uppercase small fw-bold">Étudiants Actifs</h6>
+                    <h6 class="text-muted text-uppercase small fw-bold">Dépôts en Cours</h6>
                     <div class="d-flex justify-content-between align-items-center">
-                        <h2 class="mb-0 fw-bold">{{ nb_etudiants }}</h2>
-                        <i class="fas fa-user-graduate fa-2x text-warning opacity-50"></i>
+                        <h2 class="mb-0 fw-bold">{{ nb_pre_depots }}</h2>
+                        <i class="fas fa-file-pdf fa-2x text-warning opacity-50"></i>
                     </div>
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white border-start border-danger border-5">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-warning text-white shadow">
                 <div class="card-body">
-                    <h6 class="text-muted text-uppercase small fw-bold">Mémoires Soutenus</h6>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h2 class="mb-0 fw-bold text-dark">{{ nb_soutenances }}</h2>
-                        <i class="fas fa-check-circle fa-2x text-danger opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 h-100 bg-dark text-white">
-                <div class="card-body">
-                    <h6 class="text-uppercase opacity-75 small fw-bold">Jurys à valider</h6>
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Jurys à Valider</h6>
                     <div class="d-flex justify-content-between align-items-center">
                         <h2 class="mb-0 fw-bold">{{ nb_attente_validation }}</h2>
-                        <i class="fas fa-clock fa-2x opacity-25"></i>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-25"></i>
                     </div>
                 </div>
             </div>
@@ -62,9 +63,9 @@
 
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                 <div class="card-header bg-white py-3 border-0">
-                    <h5 class="mb-0 fw-bold text-secondary"><i class="fas fa-chart-bar me-2"></i>Effectifs par Département</h5>
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="fas fa-university me-2 text-primary"></i>Étudiants par Département</h5>
                 </div>
                 <div class="card-body">
                     <div style="height: 300px;">
@@ -77,60 +78,68 @@
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                 <div class="card-header bg-white py-3 border-0">
-                    <h5 class="mb-0 fw-bold text-secondary"><i class="fas fa-bolt me-2 text-warning"></i>Actions Rapides</h5>
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="fas fa-user-clock me-2 text-warning"></i>Flux Étudiants</h5>
                 </div>
-                <div class="card-body d-grid gap-3">
-                    <a href="{% url 'administration:liste_annees' %}" class="btn btn-light text-start p-3 rounded-3 border-0 action-btn">
-                        <i class="fas fa-calendar-plus text-primary me-2"></i> Gérer les Années
-                    </a>
-                    <a href="{% url 'administration:liste_chefs' %}" class="btn btn-light text-start p-3 rounded-3 border-0 action-btn">
-                        <i class="fas fa-user-tie text-success me-2"></i> Gérer les Chefs Dept
-                    </a>
-                    <a href="{% url 'administration:validation_jury_liste' %}" class="btn btn-light text-start p-3 rounded-3 border-0 action-btn position-relative">
-                        <i class="fas fa-check-double text-danger me-2"></i> Valider les Jurys
-                        {% if nb_attente_validation > 0 %}
-                        <span class="position-absolute top-50 end-0 translate-middle-y me-3 badge rounded-pill bg-danger">
-                            {{ nb_attente_validation }}
-                        </span>
-                        {% endif %}
-                    </a>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <tbody>
+                                {% for etu in derniers_etudiants %}
+                                <tr>
+                                    <td class="px-4 py-3 border-0">
+                                        <div class="fw-bold small">{{ etu.nom }} {{ etu.prenom }}</div>
+                                        <div class="text-muted small">{{ etu.matricule }} | {{ etu.classe.nom_court }}</div>
+                                    </td>
+                                    <td class="text-end px-4 border-0">
+                                        {% if etu.dossier.is_inscription_validee %}
+                                            <span class="badge bg-success-soft text-success"><i class="fas fa-check"></i></span>
+                                        {% else %}
+                                            <span class="badge bg-light text-muted"><i class="fas fa-clock"></i></span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="2" class="text-center py-4">Aucun étudiant inscrit.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 border-top text-center">
+                        <a href="{% url 'administration:liste_etudiants' %}" class="btn btn-sm btn-light rounded-pill px-4">Voir toute la base</a>
+                    </div>
                 </div>
             </div>
         </div>
-
-       
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Configuration du graphique (inchangée)
     const ctx = document.getElementById('deptChart').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
         data: {
             labels: [{% for s in stats_depts %}"{{ s.nom }}",{% endfor %}],
             datasets: [{
-                label: 'Étudiants',
+                label: 'Nombre d\'étudiants',
                 data: [{% for s in stats_depts %}{{ s.total_etudiants }},{% endfor %}],
                 backgroundColor: '#2e5eb7',
-                borderRadius: 8,
+                borderRadius: 10,
             }]
         },
-        options: { 
-            responsive: true, 
+        options: {
+            responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, grid: { drawBorder: false } }, x: { grid: { display: false } } }
+            scales: { 
+                y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+                x: { grid: { display: false } }
+            }
         }
     });
 </script>
 
 <style>
-    .rounded-4 { border-radius: 15px !important; }
-    .action-btn { transition: all 0.3s; background: #f8f9fa; }
-    .action-btn:hover { background: #e9ecef; transform: translateX(5px); }
-    .table thead th { border-top: none; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    .avatar-sm { font-size: 0.8rem; }
+    .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
 </style>
 {% endblock %}

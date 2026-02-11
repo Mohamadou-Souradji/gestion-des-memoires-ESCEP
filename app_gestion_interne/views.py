@@ -9,201 +9,179 @@ from django.db.models import Q # Importation spécifique pour les requêtes comp
 def is_surveillant(user):
     return user.is_authenticated and user.role == 'SURVEILLANT'
 
+
+from django.db.models import Count
+
+
 @login_required
 @user_passes_test(is_surveillant, login_url='app_auth:login')
 def dashboard_surveillant(request):
-    """Dash avec stats réelles par filière"""
-    stats_filieres = []
-    filieres = Filiere.objects.select_related('departement').all()
+    # 1. Base des dossiers éligibles
+    base_queryset = DossierMemoire.objects.filter(
+        is_inscription_validee=True,
+        is_semestres_valides=True,
+        is_theme_valide=True
+    )
+
+    # 2. Statistiques Globales
+    total_global_dossiers = base_queryset.count()
+    total_pre_faits = base_queryset.filter(is_pre_depot_fait=True).count()
+    total_post_faits = base_queryset.filter(is_post_depot_fait=True).count()
+    total_publies = base_queryset.filter(is_soutenu=True).count()
+
+    total_attente_pre = total_global_dossiers - total_pre_faits
+
+    # 3. Statistiques par Filière (Approche simplifiée)
+    filieres = Filiere.objects.all()
+    stats_list = []
 
     for f in filieres:
-        # Éligibles (Les 3 conditions : Inscription, Semestre, Thème)
-        eligibles = DossierMemoire.objects.filter(
-            etudiant__classe__filiere=f,
-            is_inscription_validee=True,
-            is_semestres_valides=True,
-            is_theme_valide=True
-        ).count()
-        
-        faits = DossierMemoire.objects.filter(
-            etudiant__classe__filiere=f,
-            is_pre_depot_fait=True
-        ).count()
+        # On filtre les dossiers éligibles appartenant à cette filière
+        dossiers_filiere = base_queryset.filter(etudiant__classe__filiere=f)
 
-        stats_filieres.append({
-            'filiere': f,
-            'eligibles': eligibles,
-            'faits': faits,
-            'manquants': eligibles - faits,
-            'progression': (faits * 100 / eligibles) if eligibles > 0 else 0
+        attendus = dossiers_filiere.count()
+        faits = dossiers_filiere.filter(is_pre_depot_fait=True).count()
+
+        taux = (faits / attendus * 100) if attendus > 0 else 0
+
+        stats_list.append({
+            'filiere__nom': f.nom,
+            'total_attendus': attendus,
+            'total_faits': faits,
+            'taux': taux
         })
 
-    return render(request, 'surveillant/dashboard.html', {'stats': stats_filieres})
+    context = {
+        'total_global_dossiers': total_global_dossiers,
+        'total_pre_depots': total_pre_faits,
+        'total_post_depots': total_post_faits,
+        'total_attente_pre': total_attente_pre,
+        'total_publies': total_publies,
+        'stats_filiere': stats_list,
+    }
 
+    return render(request, 'surveillant/dashboard.html', context)
+
+# Test de sécurité commun
+def is_surveillant_ou_de(user):
+    return user.is_authenticated and user.role in ['SURVEILLANT', 'DE']
+
+# --- PRÉ-DÉPÔT (AVANT SOUTENANCE) ---
 @login_required
-@user_passes_test(is_surveillant, login_url='app_auth:login')
-def surveillant_vagues(request):
-    """Liste des vagues par année de création"""
-    vagues = Vague.objects.all().order_by('-date_creation')
-    return render(request, 'surveillant/vagues_liste.html', {'vagues': vagues})
-
-@login_required
-@user_passes_test(is_surveillant, login_url='app_auth:login')
-def surveillant_pre_depot_liste(request, vague_id):
-    vague = get_object_or_404(Vague, id=vague_id)
-    
-    # 1. On récupère les années scolaires concernées par la vague actuelle
-    annees_ids = vague.annees_concernees.values_list('id', flat=True)
-
-    # 2. FILTRAGE LOGIQUE ANTI-DOUBLON
-    # On filtre les dossiers dont l'étudiant est dans une des années de la vague
-    # ET dont les pré-requis (thème, inscription, semestres) sont validés
-    dossiers = DossierMemoire.objects.filter(
-        etudiant__annee_id__in=annees_ids,
-        is_theme_valide=True,
+@user_passes_test(is_surveillant_ou_de, login_url='app_auth:login')
+def surveillant_pre_depot_liste(request):
+    dossiers_queryset = DossierMemoire.objects.filter(
+        is_inscription_validee=True,
         is_semestres_valides=True,
-        is_inscription_validee=True
-    ).filter(
-        # CONDITION CRUCIALE :
-        # L'étudiant apparaît s'il n'est rattaché à AUCUNE vague (vague__isnull=True)
-        # OU s'il est rattaché spécifiquement à CETTE vague (vague=vague)
-        Q(vague__isnull=True) | Q(vague=vague)
-    ).select_related('etudiant', 'etudiant__classe', 'etudiant__annee')
+        is_theme_valide=True
+    ).select_related('etudiant', 'etudiant__classe', 'etudiant__annee', 'etudiant__classe__filiere')
 
-    # 3. Filtres de l'interface (Promotion, Filière, Classe)
+    q_matricule = request.GET.get('matricule', '').strip()
     f_id = request.GET.get('filiere')
     c_id = request.GET.get('classe')
     a_id = request.GET.get('annee_scolaire')
 
-    if f_id: dossiers = dossiers.filter(etudiant__classe__filiere_id=f_id)
-    if c_id: dossiers = dossiers.filter(etudiant__classe_id=c_id)
-    if a_id: dossiers = dossiers.filter(etudiant__annee_id=a_id)
+    has_filter = any([q_matricule, f_id, c_id, a_id])
+
+    if q_matricule:
+        dossiers_queryset = dossiers_queryset.filter(etudiant__matricule__icontains=q_matricule)
+    if f_id:
+        dossiers_queryset = dossiers_queryset.filter(etudiant__classe__filiere_id=f_id)
+    if c_id:
+        dossiers_queryset = dossiers_queryset.filter(etudiant__classe_id=c_id)
+    if a_id:
+        dossiers_queryset = dossiers_queryset.filter(etudiant__annee_id=a_id)
+
+    dossiers = dossiers_queryset.order_by('etudiant__nom') if has_filter else []
 
     context = {
-        'vague': vague,
-        'is_ouverte': vague.est_active_generale, 
         'dossiers': dossiers,
         'filieres': Filiere.objects.all(),
-        'classes': Classe.objects.filter(filiere_id=f_id) if f_id else None,
-        'annees_vague': vague.annees_concernees.all(),
+        'classes': Classe.objects.filter(filiere_id=f_id) if f_id else Classe.objects.all(),
+        'annees': AnneeScolaire.objects.all().order_by('-id'),
+        'q_matricule': q_matricule,
+        'has_filter': has_filter,
     }
+
+    if request.user.role == 'DE':
+        return render(request, 'administration/supervision/surveillance_pre.html', context)
     return render(request, 'surveillant/pre_depot_liste.html', context)
 
-# Ajoute Classe dans tes imports en haut
-from app_administration.models import Vague, Departement, Filiere, AnneeScolaire, Classe
-
 @login_required
-@user_passes_test(is_surveillant, login_url='app_auth:login')
+@user_passes_test(is_surveillant_ou_de, login_url='app_auth:login')
 def action_save_pdf(request, dossier_id):
     dossier = get_object_or_404(DossierMemoire, id=dossier_id)
-    
-    # On récupère l'ID de la vague depuis le formulaire modal
-    vague_id = request.POST.get('vague_id')
-
     if request.method == 'POST':
-        # --- 1. CAS SUPPRESSION ---
         if 'delete' in request.POST:
             if dossier.fichier_pre_depot:
                 dossier.fichier_pre_depot.delete()
-            
             dossier.is_pre_depot_fait = False
-            dossier.vague = None  # ON LIBÈRE L'ÉTUDIANT (plus rattaché à cette vague)
             dossier.save()
-            
-            messages.warning(request, f"Dépôt de {dossier.etudiant.nom} supprimé. L'étudiant est à nouveau disponible.")
-
-        # --- 2. CAS UPLOAD ---
+            messages.warning(request, f"Dépôt de {dossier.etudiant.nom} retiré.")
         elif 'fichier_pdf' in request.FILES:
-            if not vague_id:
-                messages.error(request, "Erreur : ID de la vague manquant.")
-                return redirect(request.META.get('HTTP_REFERER'))
-
-            # On vérifie si la vague est bien ouverte avant d'enregistrer
-            vague_actuelle = get_object_or_404(Vague, id=vague_id)
-            if not vague_actuelle.est_active_generale:
-                messages.error(request, "Impossible : Cette vague est clôturée.")
-                return redirect(request.META.get('HTTP_REFERER'))
-
-            # Enregistrement du fichier et verrouillage de la vague
             dossier.fichier_pre_depot = request.FILES['fichier_pdf']
             dossier.is_pre_depot_fait = True
-            dossier.vague = vague_actuelle  # ON VERROUILLE L'ÉTUDIANT À CETTE VAGUE
             dossier.save()
-            
-            messages.success(request, f"Pré-dépôt de {dossier.etudiant.nom} validé pour la vague {vague_actuelle.libelle}.")
-
+            messages.success(request, f"Pré-dépôt enregistré pour {dossier.etudiant.nom}.")
     return redirect(request.META.get('HTTP_REFERER'))
 
+# --- POST-DÉPÔT (APRÈS SOUTENANCE) ---
 @login_required
-@user_passes_test(is_surveillant, login_url='app_auth:login')
-def surveillant_vagues_post(request):
-    """Même principe que les vagues pré-dépôt mais pour le circuit final"""
-    vagues = Vague.objects.all().order_by('-date_creation')
-    return render(request, 'surveillant/vagues_post_liste.html', {'vagues': vagues})
-
-# --- LISTE DES ÉTUDIANTS ÉLIGIBLES AU DÉPÔT FINAL ---
-from django.db.models import Q
-
-@login_required
-@user_passes_test(is_surveillant, login_url='app_auth:login')
-def surveillant_post_depot_liste(request, vague_id):
-    vague = get_object_or_404(Vague, id=vague_id)
-    annees_ids = vague.annees_concernees.values_list('id', flat=True)
-
-    # LOGIQUE POST-DÉPÔT SÉCURISÉE : 
-    # 1. L'étudiant doit appartenir aux années de la vague.
-    # 2. Il doit impérativement être rattaché à CETTE vague précise (vague=vague).
-    # 3. Il doit avoir fait son pré-dépôt ET avoir soutenu.
-    dossiers = DossierMemoire.objects.filter(
-        vague=vague, # Verrouillage strict sur la vague actuelle
-        etudiant__annee_id__in=annees_ids,
+@user_passes_test(is_surveillant_ou_de, login_url='app_auth:login')
+def surveillant_post_depot_liste(request):
+    dossiers_queryset = DossierMemoire.objects.filter(
         is_pre_depot_fait=True,
         is_soutenu=True
-    ).select_related('etudiant', 'etudiant__classe', 'etudiant__annee')
+    ).select_related('etudiant', 'etudiant__classe', 'etudiant__annee', 'etudiant__classe__filiere')
 
-    # Filtres de l'interface
+    q_matricule = request.GET.get('matricule', '').strip()
     f_id = request.GET.get('filiere')
     c_id = request.GET.get('classe')
     a_id = request.GET.get('annee_scolaire')
 
-    if f_id: dossiers = dossiers.filter(etudiant__classe__filiere_id=f_id)
-    if c_id: dossiers = dossiers.filter(etudiant__classe_id=c_id)
-    if a_id: dossiers = dossiers.filter(etudiant__annee_id=a_id)
+    has_filter = any([q_matricule, f_id, c_id, a_id])
+
+    if q_matricule:
+        dossiers_queryset = dossiers_queryset.filter(etudiant__matricule__icontains=q_matricule)
+    if f_id:
+        dossiers_queryset = dossiers_queryset.filter(etudiant__classe__filiere_id=f_id)
+    if c_id:
+        dossiers_queryset = dossiers_queryset.filter(etudiant__classe_id=c_id)
+    if a_id:
+        dossiers_queryset = dossiers_queryset.filter(etudiant__annee_id=a_id)
+
+    dossiers = dossiers_queryset.order_by('etudiant__nom') if has_filter else []
 
     context = {
-        'vague': vague,
-        'is_ouverte': vague.est_active_generale, 
         'dossiers': dossiers,
         'filieres': Filiere.objects.all(),
-        'classes': Classe.objects.filter(filiere_id=f_id) if f_id else None,
-        'annees_vague': vague.annees_concernees.all(),
+        'classes': Classe.objects.filter(filiere_id=f_id) if f_id else Classe.objects.all(),
+        'annees': AnneeScolaire.objects.all().order_by('-id'),
+        'q_matricule': q_matricule,
+        'has_filter': has_filter,
     }
+
+    if request.user.role == 'DE':
+        return render(request, 'administration/supervision/surveillance_post.html', context)
     return render(request, 'surveillant/post_depot_liste.html', context)
 
 @login_required
-@user_passes_test(is_surveillant, login_url='app_auth:login')
+@user_passes_test(is_surveillant_ou_de, login_url='app_auth:login')
 def action_save_post_pdf(request, dossier_id):
     dossier = get_object_or_404(DossierMemoire, id=dossier_id)
-    
     if request.method == 'POST':
-        # CAS SUPPRESSION
         if 'delete' in request.POST:
             if dossier.fichier_post_depot:
                 dossier.fichier_post_depot.delete()
             dossier.is_post_depot_fait = False
             dossier.save()
-            messages.warning(request, f"Dépôt final de {dossier.etudiant.nom} supprimé.")
-        
-        # CAS UPLOAD FINAL
+            messages.warning(request, f"Archive finale de {dossier.etudiant.nom} retirée.")
         elif 'fichier_pdf' in request.FILES:
             dossier.fichier_post_depot = request.FILES['fichier_pdf']
             dossier.is_post_depot_fait = True
             dossier.save()
-            messages.success(request, f"Mémoire final de {dossier.etudiant.nom} archivé avec succès.")
-
+            messages.success(request, f"Mémoire final de {dossier.etudiant.nom} archivé.")
     return redirect(request.META.get('HTTP_REFERER'))
-
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -237,162 +215,166 @@ def scolarite_dashboard(request):
     }
     return render(request, 'scolarite/dashboard.html', context)
 
+def is_scolarite_ou_de(user):
+    return user.is_authenticated and user.role in ['SCOLARITE', 'DE']
+
 @login_required
-@user_passes_test(is_scolarite)
+@user_passes_test(is_scolarite_ou_de)
 def liste_etudiants_scolarite(request):
     filiere_id = request.GET.get('filiere')
     classe_id = request.GET.get('classe')
     annee_id = request.GET.get('annee')
-    etat = request.GET.get('etat') # Nouveau filtre d'état
+    etat = request.GET.get('etat')
+    search_matricule = request.GET.get('matricule')
 
-    # Base des étudiants
-    etudiants = Etudiant.objects.select_related('classe__filiere', 'annee', 'dossier').all()
+    # Liste vide par défaut
+    etudiants = Etudiant.objects.none()
 
-    # Application des filtres
-    if filiere_id:
-        etudiants = etudiants.filter(classe__filiere_id=filiere_id)
-    if classe_id:
-        etudiants = etudiants.filter(classe_id=classe_id)
-    if annee_id:
-        etudiants = etudiants.filter(annee_id=annee_id)
-    
-    # Filtre par état du dossier (via la relation OneToOne)
-    if etat == 'valide':
-        etudiants = etudiants.filter(dossier__is_semestres_valides=True)
-    elif etat == 'non_valide':
-        # On prend ceux qui n'ont pas de dossier OU dont le dossier est à False
-        etudiants = etudiants.filter(Q(dossier__isnull=True) | Q(dossier__is_semestres_valides=False))
+    if any([filiere_id, classe_id, annee_id, etat, search_matricule]):
+        etudiants = Etudiant.objects.select_related('classe__filiere', 'annee', 'dossier').all()
 
-    # Logique pour le sélecteur de classes dynamique
-    if filiere_id:
-        classes_filtrees = Classe.objects.filter(filiere_id=filiere_id)
-    else:
-        classes_filtrees = Classe.objects.all()
+        if search_matricule:
+            etudiants = etudiants.filter(matricule__icontains=search_matricule)
+        if filiere_id:
+            etudiants = etudiants.filter(classe__filiere_id=filiere_id)
+        if classe_id:
+            etudiants = etudiants.filter(classe_id=classe_id)
+        if annee_id:
+            etudiants = etudiants.filter(annee_id=annee_id)
+        
+        if etat == 'valide':
+            etudiants = etudiants.filter(dossier__is_semestres_valides=True)
+        elif etat == 'non_valide':
+            etudiants = etudiants.filter(Q(dossier__isnull=True) | Q(dossier__is_semestres_valides=False))
 
     context = {
         'etudiants': etudiants,
         'filieres': Filiere.objects.all(),
-        'classes': classes_filtrees, # On ne passe que les classes utiles
+        'classes': Classe.objects.filter(filiere_id=filiere_id) if filiere_id else Classe.objects.all(),
         'annees': AnneeScolaire.objects.all(),
     }
+
+    # SELECTION DU TEMPLATE SELON LE ROLE
+    if request.user.role == 'DE':
+        return render(request, 'administration/supervision/scolarite.html', context)
     return render(request, 'scolarite/liste_etudiants.html', context)
+
 @login_required
-@user_passes_test(is_scolarite)
 def toggle_semestres(request, matricule):
-    """
-    Une seule vue pour Valider/Invalider (Toggle) 
-    C'est plus moderne et évite de multiplier les URLs.
-    """
     etudiant = get_object_or_404(Etudiant, matricule=matricule)
-    
-    # get_or_create : Si le dossier n'existe pas (Dev 1 pas encore passé), on le crée
     dossier, created = DossierMemoire.objects.get_or_create(etudiant=etudiant)
-    
-    # Inversion de l'état
+
+    # Sécurité
+    if dossier.is_soutenu:
+        messages.error(request, f"Modification impossible : {etudiant.nom} a déjà soutenu.")
+        return redirect(request.META.get('HTTP_REFERER', 'gestion_interne:scolarite_etudiants'))
+
     dossier.is_semestres_valides = not dossier.is_semestres_valides
     dossier.save()
-    
+
     etat = "validés" if dossier.is_semestres_valides else "invalidés"
     messages.success(request, f"Semestres de {etudiant.nom} {etat} avec succès.")
-    
-    return redirect(request.META.get('HTTP_REFERER', 'app_gestion_interne:scolarite_etudiants'))
+
+    # Retour à l'envoyeur (DE ou Scolarité reste sur sa page)
+    return redirect(request.META.get('HTTP_REFERER', 'gestion_interne:scolarite_etudiants'))
 
 
 @login_required
 @user_passes_test(is_scolarite)
-def scolarite_vagues_attestations(request):
-    # On récupère toutes les vagues pour le regroupement par année
-    vagues = Vague.objects.all().order_by('-date_creation')
-    return render(request, 'scolarite/vagues_liste.html', {'vagues': vagues})
-
-
-@login_required
-@user_passes_test(is_scolarite)
-def scolarite_detail_attestations(request, vague_id):
-    """Consultation des étudiants par vague via la relation Dossier"""
-    vague = get_object_or_404(Vague, id=vague_id)
-
-    # Récupération des filtres
+def scolarite_detail_attestations(request):
+    # On récupère uniquement ces 4 filtres
     f_id = request.GET.get('filiere')
     c_id = request.GET.get('classe')
     a_id = request.GET.get('annee_acad')
+    search = request.GET.get('search', '').strip()
 
-    # CORRECTION ICI : On filtre les étudiants dont le dossier appartient à cette vague
-    # et qui ont soutenu.
-    etudiants = Etudiant.objects.filter(
-        dossier__vague=vague,
-        dossier__is_soutenu=True
-    )
+    # Si l'un de ces champs est rempli, on cherche
+    has_filter = any([f_id, c_id, a_id, search])
 
-    # Application des autres filtres
-    if f_id:
-        etudiants = etudiants.filter(classe__filiere_id=f_id)
-    if c_id:
-        etudiants = etudiants.filter(classe_id=c_id)
-    if a_id:
-        etudiants = etudiants.filter(annee_id=a_id)
+    if has_filter:
+        # On prend tous les étudiants qui ont soutenu (peu importe la vague)
+        etudiants = Etudiant.objects.filter(dossier__is_soutenu=True).select_related('classe__filiere', 'annee')
+
+        if f_id: etudiants = etudiants.filter(classe__filiere_id=f_id)
+        if c_id: etudiants = etudiants.filter(classe_id=c_id)
+        if a_id: etudiants = etudiants.filter(annee_id=a_id)
+        if search:
+            etudiants = etudiants.filter(Q(nom__icontains=search) | Q(matricule__icontains=search))
+
+        etudiants = etudiants.order_by('nom')
+    else:
+        etudiants = []
 
     context = {
-        'vague': vague,
-        'etudiants': etudiants.select_related('classe__filiere', 'annee', 'dossier'),
+        'etudiants': etudiants,
+        'has_filter': has_filter,
         'filieres': Filiere.objects.all(),
-        'classes': Classe.objects.filter(filiere_id=f_id) if f_id else Classe.objects.all(),
+        'classes': Classe.objects.filter(filiere_id=f_id) if f_id else [],
         'annees_options': AnneeScolaire.objects.all(),
     }
     return render(request, 'scolarite/vague_detail_attestations.html', context)
-
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from .models import Etudiant, DossierMemoire, Classe, AnneeScolaire
 from datetime import datetime
 
+from django.shortcuts import render
+from django.db.models import Q
+from datetime import datetime
 
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.contrib import messages
 @login_required
 def liste_etudiants_comptabilite(request):
-    filiere_id = request.GET.get('filiere')
-    classe_id = request.GET.get('classe')
-    annee_id = request.GET.get('annee')
-    search = request.GET.get('search')
+    f_id = request.GET.get('filiere')
+    c_id = request.GET.get('classe')
+    a_id = request.GET.get('annee')
+    search = request.GET.get('search', '').strip()
 
-    etudiants = Etudiant.objects.select_related('classe__filiere', 'annee').prefetch_related('dossier').all()
+    has_filter = any([f_id, c_id, a_id, search])
 
-    # Filtre par Filière
-    if filiere_id:
-        etudiants = etudiants.filter(classe__filiere_id=filiere_id)
-
-    # Filtre par Classe
-    if classe_id:
-        etudiants = etudiants.filter(classe_id=classe_id)
-
-    # Filtre par Année
-    if annee_id:
-        etudiants = etudiants.filter(annee_id=annee_id)
-
-    # Recherche Nom/Matricule
-    if search:
-        etudiants = etudiants.filter(nom__icontains=search) | etudiants.filter(matricule__icontains=search)
+    if has_filter:
+        etudiants = Etudiant.objects.select_related('classe__filiere', 'annee', 'dossier').all()
+        if f_id: etudiants = etudiants.filter(classe__filiere_id=f_id)
+        if c_id: etudiants = etudiants.filter(classe_id=c_id)
+        if a_id: etudiants = etudiants.filter(annee_id=a_id)
+        if search:
+            etudiants = etudiants.filter(Q(nom__icontains=search) | Q(matricule__icontains=search))
+    else:
+        etudiants = Etudiant.objects.none()
 
     context = {
         'etudiants': etudiants,
+        'has_filter': has_filter,
         'filieres': Filiere.objects.all(),
-        # Si une filière est choisie, on ne montre que ses classes
-        'classes': Classe.objects.filter(filiere_id=filiere_id) if filiere_id else Classe.objects.all(),
+        'classes': Classe.objects.filter(filiere_id=f_id) if f_id else Classe.objects.all(),
         'annees': AnneeScolaire.objects.all(),
-        'current_year': datetime.now().year,
     }
+    
+    # Choix du template selon le rôle (DE ou Comptable)
+    if request.user.role == 'DE':
+        return render(request, 'administration/supervision/comptabilite.html', context)
     return render(request, 'comptabilite/liste_etudiants.html', context)
-
 
 @login_required
 def toggle_inscription(request, matricule):
-    """Bouton unique pour Valider/Annuler avec sécurité soutenance"""
-    etudiant = get_object_or_404(Etudiant, matricule=matricule)
-    dossier, created = DossierMemoire.objects.get_or_create(etudiant=etudiant)
+    if request.method == "POST":
+        etudiant = get_object_or_404(Etudiant, matricule=matricule)
+        dossier, created = DossierMemoire.objects.get_or_create(etudiant=etudiant)
 
-    # Sécurité : Si déjà soutenu, on ne change plus rien
-    if not dossier.is_soutenu:
         dossier.is_inscription_validee = not dossier.is_inscription_validee
         dossier.save()
 
-    return redirect('app_gestion_interne:liste_etudiants_comptabilite')
+        if dossier.is_inscription_validee:
+            messages.success(request, f"Inscription validée pour {etudiant.nom} {etudiant.prenom}.")
+        else:
+            messages.warning(request, f"Validation annulée pour {etudiant.nom} {etudiant.prenom}.")
+
+        # Redirection intelligente : renvoie le DE ou le Comptable sur sa page d'origine
+        next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
+        return redirect(next_url if next_url else 'gestion_interne:liste_etudiants_comptabilite')
+
+    return redirect('gestion_interne:liste_etudiants_comptabilite')

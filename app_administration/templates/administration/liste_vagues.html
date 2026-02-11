@@ -1,60 +1,87 @@
-{% extends 'administration/base_de.html' %}
+{% extends 'base_chef.html' %}
+{% load static %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h2 style="color: var(--escep-blue);"><i class="fas fa-calendar-check me-2"></i>Gestion des Vagues</h2>
+<style>
+    /* Animation pour les vagues en cours spécifique au Chef */
+    .anim-pulse {
+        animation: pulse-blue 2s infinite;
+    }
+    @keyframes pulse-blue {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+    }
+    .x-small { font-size: 0.75rem; }
+    .card-header-chef {
+        background-color: var(--escep-blue);
+        border-bottom: 3px solid var(--escep-yellow);
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-4 border-bottom">
+    <h3 class="fw-bold" style="color: var(--escep-blue);">
+        <i class="fas fa-layer-group me-2"></i>Gestion des Vagues
+    </h3>
+    <span class="badge bg-light text-dark border p-2">
+        <i class="fas fa-building me-1 text-primary"></i> {{ request.user.departement.nom }}
+    </span>
 </div>
 
 <div class="row">
     <div class="col-md-4 mb-4">
-        <div class="card shadow border-0 rounded-4">
-            <div class="card-header text-white rounded-top-4 py-3" style="background-color: var(--escep-blue);">
-                <h5 class="mb-0 small fw-bold text-uppercase">Nouvelle Vague</h5>
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header card-header-chef text-white rounded-top-4 py-3">
+                <h6 class="mb-0 fw-bold text-uppercase"><i class="fas fa-plus-circle me-2"></i>Nouvelle Session</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 {% if vague_en_cours %}
-                    <div class="alert alert-warning border-0 shadow-sm rounded-3 py-3">
+                    <div class="alert alert-info border-0 shadow-sm rounded-3">
                         <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-lock me-2 fs-4"></i>
-                            <strong class="small">SESSION BLOQUÉE</strong>
+                            <i class="fas fa-info-circle me-2 fs-5"></i>
+                            <strong class="small">SESSION ACTIVE</strong>
                         </div>
-                        <p class="small mb-0">La <b>{{ vague_en_cours.libelle }}</b> est en cours. Clôturez-la manuellement dans le tableau pour en ouvrir une nouvelle.</p>
+                        <p class="small mb-0">
+                            La session <b>{{ vague_en_cours.libelle }}</b> est ouverte pour votre département. 
+                            Veuillez la clôturer pour en lancer une nouvelle.
+                        </p>
                     </div>
-                    <button class="btn btn-secondary w-100 fw-bold rounded-pill opacity-50" disabled>LANCER IMPOSSIBLE</button>
+                    <button class="btn btn-secondary w-100 fw-bold rounded-pill opacity-50" disabled>CRÉATION BLOQUÉE</button>
                 {% else %}
                     <form method="POST">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Nom de la Vague</label>
+                            <label class="form-label fw-bold small text-muted">Nom de la Vague</label>
                             <select name="libelle" class="form-select border-0 bg-light" required>
                                 <option value="Première vague">Première vague</option>
                                 <option value="Deuxième vague">Deuxième vague</option>
                                 <option value="Troisième vague">Troisième vague</option>
+                                <option value="Vague de rattrapage">Vague de rattrapage</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Années Scolaires</label>
-                            <div class="border rounded p-2 bg-light shadow-sm" style="max-height: 120px; overflow-y: auto;">
+                            <label class="form-label fw-bold small text-muted">Années Scolaires Concernées</label>
+                            <div class="border-0 rounded p-3 bg-light shadow-inner" style="max-height: 150px; overflow-y: auto;">
                                 {% for annee in toutes_les_annees %}
-                                <div class="form-check">
+                                <div class="form-check mb-1">
                                     <input class="form-check-input" type="checkbox" name="annees_concernees" value="{{ annee.id }}" id="annee_{{ annee.id }}">
                                     <label class="form-check-label small" for="annee_{{ annee.id }}">{{ annee.libelle }}</label>
                                 </div>
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="row g-2">
-                            <div class="col-6 mb-3">
-                                <label class="form-label fw-bold small text-muted text-uppercase" style="font-size: 0.65rem;">Ouverture</label>
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <label class="form-label fw-bold x-small text-uppercase">Ouverture</label>
                                 <input type="datetime-local" name="date_ouverture" class="form-control border-0 bg-light" required>
                             </div>
-                            <div class="col-6 mb-3">
-                                <label class="form-label fw-bold small text-muted text-uppercase" style="font-size: 0.65rem;">Fermeture</label>
+                            <div class="col-6">
+                                <label class="form-label fw-bold x-small text-uppercase">Fermeture</label>
                                 <input type="datetime-local" name="date_fermeture" class="form-control border-0 bg-light" required>
                             </div>
                         </div>
-                        <button type="submit" class="btn w-100 fw-bold shadow-sm rounded-pill mt-2" style="background-color: var(--escep-yellow); color: var(--escep-blue);">
-                            LANCER LA VAGUE
+                        <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm rounded-pill py-2">
+                            OUVRIR LA SESSION
                         </button>
                     </form>
                 {% endif %}
@@ -63,74 +90,162 @@
     </div>
 
     <div class="col-md-8">
-        <div class="card shadow border-0 rounded-4 overflow-hidden">
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
             <div class="card-body p-0">
-                <table class="table table-hover align-middle mb-0 text-center">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="text-start ps-4">Vague</th>
-                            <th>Période</th>
-                            <th>Statut</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for v in vagues %}
-                        <tr>
-                            <td class="text-start ps-4">
-                                <span class="fw-bold d-block">{{ v.libelle }}</span>
-                                {% for annee in v.annees_concernees.all %}
-                                    <small class="text-primary x-small fw-bold">#{{ annee.libelle }}</small>
-                                {% endfor %}
-                            </td>
-                            <td>
-                                <div class="x-small fw-medium text-muted">
-                                    {{ v.date_ouverture|date:"d M Y" }} au {{ v.date_fermeture|date:"d M Y" }}
-                                </div>
-                            </td>
-                            <td>
-                                {% if v.est_cloturee %}
-                                    <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3">Clôturée</span>
-                                {% else %}
-                                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 anim-pulse">En cours</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="d-flex justify-content-center gap-1">
-                                    <button class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#editVague{{ v.id }}">
-                                        <i class="fas fa-edit text-muted"></i>
-                                    </button>
-                                    
-                                    {% if not v.est_cloturee %}
-                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clotureVague{{ v.id }}">
-                                        <i class="fas fa-lock"></i>
-                                    </button>
+                <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0 text-center">
+                        <thead class="bg-light sticky-top">
+                            <tr class="x-small text-uppercase text-muted">
+                                <th class="text-start ps-4 py-3">Session & Cohortes</th>
+                                <th>Validité</th>
+                                <th>État</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in vagues %}
+                            <tr>
+                                <td class="text-start ps-4">
+                                    <span class="fw-bold d-block text-dark">{{ v.libelle }}</span>
+                                    <div class="mt-1">
+                                        {% for annee in v.annees_concernees.all %}
+                                            <span class="badge bg-info-subtle text-info x-small fw-bold">#{{ annee.libelle }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="x-small fw-medium">
+                                        <span class="text-primary">{{ v.date_ouverture|date:"d/m/Y H:i" }}</span><br>
+                                        <i class="fas fa-long-arrow-alt-down text-muted my-1"></i><br>
+                                        <span class="text-danger">{{ v.date_fermeture|date:"d/m/Y H:i" }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if v.est_cloturee %}
+                                        <span class="badge rounded-pill bg-light text-muted border px-3 py-2">
+                                            <i class="fas fa-lock me-1"></i> Archivée
+                                        </span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 anim-pulse">
+                                            <i class="fas fa-door-open me-1"></i> Active
+                                        </span>
                                     {% endif %}
-                                </div>
-                            </td>
-                        </tr>
+                                </td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        {% if v.est_cloturee %}
+                                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" 
+                                                    data-bs-toggle="modal" data-bs-target="#reouvrirVague{{ v.id }}">
+                                                <i class="fas fa-undo-alt me-1"></i> Réouvrir
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-white border shadow-sm" data-bs-toggle="modal" data-bs-target="#editVague{{ v.id }}">
+                                                <i class="fas fa-pen text-primary"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#clotureVague{{ v.id }}">
+                                                <i class="fas fa-times-circle"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
 
-                        <div class="modal fade" id="clotureVague{{ v.id }}" tabindex="-1">
-                            <div class="modal-dialog modal-dialog-centered modal-sm">
-                                <div class="modal-content border-0 shadow">
-                                    <div class="modal-body p-4 text-center">
-                                        <div class="text-danger mb-3"><i class="fas fa-exclamation-circle fa-3x"></i></div>
-                                        <h6 class="fw-bold">Clôturer cette session ?</h6>
-                                        <p class="small text-muted">Cela libérera le système pour ouvrir une nouvelle vague.</p>
-                                        <form action="{% url 'administration:cloturer_vague' v.id %}" method="POST">
+                            <div class="modal fade" id="reouvrirVague{{ v.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow-lg rounded-4">
+                                        <form action="{% url 'administration:reouvrir_vague' v.id %}" method="POST">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-danger w-100 rounded-pill fw-bold">OUI, CLÔTURER</button>
-                                            <button type="button" class="btn btn-light w-100 rounded-pill mt-2 small" data-bs-dismiss="modal">ANNULER</button>
+                                            <div class="modal-body p-4 text-center">
+                                                <div class="text-primary mb-3"><i class="fas fa-history fa-3x"></i></div>
+                                                <h5 class="fw-bold">Prolonger la session</h5>
+                                                <p class="text-muted small">Définissez la nouvelle date d'échéance pour votre département.</p>
+                                                <input type="datetime-local" name="nouvelle_date_fermeture" class="form-control border-0 bg-light py-2" required>
+                                                <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill mt-4">CONFIRMER LA PROLONGATION</button>
+                                            </div>
                                         </form>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+                            <div class="modal fade" id="editVague{{ v.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow-lg rounded-4">
+                                        <div class="modal-header bg-light border-0 py-3 ps-4">
+                                            <h6 class="fw-bold mb-0">Modifier les paramètres de session</h6>
+                                        </div>
+                                        <form action="{% url 'administration:modifier_vague' v.id %}" method="POST">
+                                            {% csrf_token %}
+                                            <div class="modal-body p-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-bold text-muted">Libellé</label>
+                                                    <input type="text" name="libelle" class="form-control bg-light border-0" value="{{ v.libelle }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-bold text-muted">Années Cibles</label>
+                                                    <div class="p-3 bg-light rounded-3 shadow-inner" style="max-height: 120px; overflow-y: auto;">
+                                                        {% for annee in toutes_les_annees %}
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="annees_concernees" value="{{ annee.id }}" 
+                                                                id="edit_annee_{{ v.id }}_{{ annee.id }}"
+                                                                {% if annee in v.annees_concernees.all %}checked{% endif %}>
+                                                            <label class="form-check-label small" for="edit_annee_{{ v.id }}_{{ annee.id }}">{{ annee.libelle }}</label>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label x-small fw-bold">Ouverture</label>
+                                                        <input type="datetime-local" name="date_ouverture" class="form-control bg-light border-0" value="{{ v.date_ouverture|date:'Y-m-d\TH:i' }}" required>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label x-small fw-bold">Fermeture</label>
+                                                        <input type="datetime-local" name="date_fermeture" class="form-control bg-light border-0" value="{{ v.date_fermeture|date:'Y-m-d\TH:i' }}" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer border-0 p-4 pt-0">
+                                                <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill">SAUVEGARDER LES MODIFICATIONS</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal fade" id="clotureVague{{ v.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered modal-sm">
+                                    <div class="modal-content border-0 shadow-lg rounded-4 text-center">
+                                        <div class="modal-body p-4">
+                                            <div class="text-danger mb-3"><i class="fas fa-exclamation-triangle fa-3x"></i></div>
+                                            <h6 class="fw-bold">Clôturer la session ?</h6>
+                                            <p class="small text-muted">Cette action est spécifique à votre département.</p>
+                                            <form action="{% url 'administration:cloturer_vague' v.id %}" method="POST">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger w-100 rounded-pill fw-bold">CONFIRMER LA CLÔTURE</button>
+                                                <button type="button" class="btn btn-light w-100 rounded-pill mt-2 small" data-bs-dismiss="modal">RETOUR</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Fermeture automatique des alertes
+    setTimeout(function() {
+        let alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            let bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
+
 {% endblock %}

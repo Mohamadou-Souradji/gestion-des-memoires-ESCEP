@@ -1,0 +1,29 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'administration:planning_liste_vagues' %}?dept_id={{ chef_dept.id }}">Sessions</a></li>
+            <li class="breadcrumb-item active">{{ vague.libelle }}</li>
+        </ol>
+    </nav>
+
+    <div class="alert alert-dark border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4 bg-dark text-white">
+        <div>
+            <i class="fas  me-2 text-warning"></i>
+            Action Superadmin sur : <strong>{{ chef_dept.nom }}</strong>
+        </div>
+        <div class="d-flex gap-2">
+            <form action="{% url 'administration:tout_cocher_soutenu' vague.id %}" method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3" onclick="return confirm('Valider toutes les soutenances programmées ?')">
+                    <i class="fas fa-check-double me-1"></i> Tout cocher Soutenu
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% include 'administration/chef/includes/planning_table_content.html' %}
+</div>
+{% endblock %}

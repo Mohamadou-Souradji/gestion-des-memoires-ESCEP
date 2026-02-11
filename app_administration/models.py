@@ -30,14 +30,24 @@ class AnneeScolaire(models.Model):
 
 class Vague(models.Model):
     libelle = models.CharField(max_length=100)
+    # On ajoute le lien vers le département
+    # null=True permet de ne pas bloquer les vagues déjà existantes lors de la migration
+    departement = models.ForeignKey(
+        'Departement', 
+        on_delete=models.CASCADE, 
+        related_name='vagues',
+        null=True,
+        blank=True
+    )
     date_creation = models.DateTimeField(auto_now_add=True)
     date_ouverture = models.DateTimeField()
     date_fermeture = models.DateTimeField()
     annees_concernees = models.ManyToManyField('AnneeScolaire', related_name='vagues')
-    est_cloturee = models.BooleanField(default=False) # Clôture générale (DE)
+    est_cloturee = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.libelle} ({self.date_creation.year})"
+        dept = self.departement.nom if self.departement else "Générale"
+        return f"{self.libelle} - {dept}"
 
     @property
     def est_active_generale(self):

@@ -1,0 +1,116 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-primary py-3">
+                    <h5 class="mb-0 text-white fw-bold">
+                        <i class="fas fa-book-medical me-2"></i> {{ title }}
+                    </h5>
+                </div>
+                
+                <div class="card-body p-4 bg-white">
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ next }}">
+
+                        {% if form.errors %}
+                        <div class="alert alert-danger rounded-4 border-0 mb-4 shadow-sm">
+                            <h6 class="fw-bold small"><i class="fas fa-exclamation-circle me-2"></i>Erreur de validation :</h6>
+                            <ul class="mb-0 small">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li><strong>{{ field.label }} :</strong> {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold small text-muted text-uppercase">Titre de l'ouvrage <span class="text-danger">*</span></label>
+                                {{ form.titre }}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted text-uppercase">Auteur <span class="text-danger">*</span></label>
+                                {{ form.auteur }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted text-uppercase">ISBN / Code Interne</label>
+                                {{ form.isbn }}
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold small text-muted text-uppercase">Catégorie <span class="text-danger">*</span></label>
+                                {{ form.categorie }}
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold small text-muted text-uppercase">Description / Résumé</label>
+                                {{ form.description }}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted text-uppercase">Image de couverture</label>
+                                {{ form.image_couverture }}
+                                <div class="form-text small">Format JPG ou PNG conseillé.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted text-uppercase">
+                                    <i class="fas fa-file-pdf text-danger"></i> Fichier PDF <span class="text-danger">*</span>
+                                </label>
+                                {{ form.fichier_numerique }}
+                                <div class="form-text small text-danger fw-bold">Obligatoire (.pdf uniquement)</div>
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <div class="form-check form-switch p-3 bg-light rounded-3 d-flex align-items-center">
+                                    {{ form.is_publie }}
+                                    <label class="form-check-label fw-bold ms-3 mb-0" for="{{ form.is_publie.id_for_label }}">
+                                        Rendre l'ouvrage immédiatement visible au catalogue
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4 opacity-50">
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ next|default:'#' }}" class="btn btn-light rounded-pill px-4 fw-bold text-muted text-decoration-none">
+                                <i class="fas fa-times me-2"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow">
+                                <i class="fas fa-save me-2"></i> Enregistrer l'ouvrage
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Harmonisation avec ton design administration */
+    .form-control, .form-select {
+        background-color: #f8f9fa !important;
+        border: 1px solid #e9ecef !important;
+        border-radius: 10px !important;
+        padding: 0.7rem 1rem !important;
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: #fff !important;
+        border-color: #0d6efd !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1) !important;
+    }
+    .form-check-input {
+        width: 3rem !important;
+        height: 1.5rem !important;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}

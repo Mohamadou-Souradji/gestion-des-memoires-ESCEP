@@ -1,0 +1,109 @@
+{% extends 'base_etudiant.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="welcome-banner p-4 mb-4 rounded-4 shadow-sm text-white">
+        <h4 class="fw-bold mb-1">Bienvenue, {{ user.first_name|default:user.username }}</h4>
+        <p class="small opacity-75 mb-0">Accédez rapidement à vos ressources académiques en ligne.</p>
+    </div>
+
+    <h6 class="fw-bold mb-3 text-dark text-uppercase small" style="letter-spacing: 1px;">Actions Rapides</h6>
+    <div class="row g-3 mb-4">
+        <div class="col-6">
+            <a href="{% url 'app_bibliotheque:liste_livres_etudiant' %}" class="quick-card card border-0 shadow-sm text-center p-4 h-100 rounded-4 text-decoration-none">
+                <div class="icon-circle bg-primary-light text-primary mb-2">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="fw-bold text-dark">Livres</div>
+                <div class="mt-2">
+                    <span class="badge bg-primary rounded-pill">{{ total_livres }}</span>
+                </div>
+            </a>
+        </div>
+        <div class="col-6">
+            <a href="{% url 'app_bibliotheque:liste_memoires_etudiant' %}" class="quick-card card border-0 shadow-sm text-center p-4 h-100 rounded-4 text-decoration-none">
+                <div class="icon-circle bg-success-light text-success mb-2">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="fw-bold text-dark">Mémoires</div>
+                <div class="mt-2">
+                    <span class="badge bg-success rounded-pill">{{ total_memoires }}</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <h6 class="fw-bold mb-3 text-dark text-uppercase small" style="letter-spacing: 1px;">Dernières Publications</h6>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <small class="text-primary fw-bold text-uppercase" style="font-size: 0.7rem;">Ouvrage récent</small>
+                        <i class="fas fa-book-open text-light fa-lg"></i>
+                    </div>
+                    {% if dernier_livre %}
+                    <h6 class="fw-bold mt-2 text-dark mb-1">{{ dernier_livre.titre|truncatechars:60 }}</h6>
+                    <p class="text-muted small mb-0">Auteur : {{ dernier_livre.auteur }}</p>
+                    {% else %}
+                    <p class="text-muted small mt-2 mb-0">Aucun livre disponible pour le moment.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <small class="text-success fw-bold text-uppercase" style="font-size: 0.7rem;">Recherche récente</small>
+                        <i class="fas fa-file-alt text-light fa-lg"></i>
+                    </div>
+                    {% if dernier_memoire %}
+                    <h6 class="fw-bold mt-2 text-dark mb-1">{{ dernier_memoire.dossier.theme|truncatechars:60 }}</h6>
+                    <p class="text-muted small mb-0">{{ dernier_memoire.nom }} {{ dernier_memoire.prenom }}</p>
+                    {% else %}
+                    <p class="text-muted small mt-2 mb-0">Aucun mémoire publié pour le moment.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .welcome-banner {
+        background: linear-gradient(135deg, #003366 0%, #0056b3 100%);
+    }
+
+    .quick-card {
+        transition: all 0.3s ease;
+        border: 1px solid transparent !important;
+    }
+
+    .quick-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--escep-yellow) !important;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+    }
+
+    .icon-circle {
+        width: 55px;
+        height: 55px;
+        line-height: 55px;
+        border-radius: 50%;
+        margin: 0 auto;
+        font-size: 1.4rem;
+    }
+
+    .bg-primary-light { background: rgba(0, 51, 102, 0.08); }
+    .bg-success-light { background: rgba(40, 167, 69, 0.08); }
+
+    /* Ajustements pour petits écrans */
+    @media (max-width: 576px) {
+        .welcome-banner { padding: 1.5rem !important; }
+        .welcome-banner h4 { font-size: 1.2rem; }
+        .quick-card { padding: 1.5rem 1rem !important; }
+    }
+</style>
+{% endblock %}

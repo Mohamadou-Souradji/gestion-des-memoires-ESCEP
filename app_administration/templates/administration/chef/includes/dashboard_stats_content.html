@@ -1,0 +1,86 @@
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 p-3 rounded-3 text-primary me-3">
+                    <i class="fas fa-users fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small mb-0">Étudiants Dept</h6>
+                    <h4 class="fw-bold mb-0">{{ total_etudiants_dept }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+            <div class="d-flex align-items-center">
+                <div class="bg-success bg-opacity-10 p-3 rounded-3 text-success me-3">
+                    <i class="fas fa-folder-open fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small mb-0">Dossiers Créés</h6>
+                    <h4 class="fw-bold mb-0">{{ dossiers_count }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+            <div class="d-flex align-items-center">
+                <div class="bg-warning bg-opacity-10 p-3 rounded-3 text-warning me-3">
+                    <i class="fas fa-gavel fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small mb-0">Attente Jurys</h6>
+                    <h4 class="fw-bold mb-0 text-danger">{{ attente_proposition }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+            <div class="d-flex align-items-center">
+                <div class="bg-info bg-opacity-10 p-3 rounded-3 text-info me-3">
+                    <i class="fas fa-calendar-alt fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small mb-0">À Programmer</h6>
+                    <h4 class="fw-bold mb-0">{{ attente_programmation }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+            <h6 class="fw-bold mb-3"><i class="fas fa-clock me-2 text-primary"></i> Session en cours</h6>
+            {% if vague_active %}
+                <div class="p-3 rounded-3 bg-light border-start border-4 border-primary">
+                    <h5 class="fw-bold mb-1">{{ vague_active.libelle }}</h5>
+                    <p class="mb-0 small text-muted">Clôture prévue le : <strong>{{ vague_active.date_fermeture|date:"d M Y à H:i" }}</strong></p>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar-times fa-3x text-muted opacity-25 mb-2"></i>
+                    <p class="text-muted italic">Aucune session active pour ce département.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+            <h6 class="fw-bold mb-3"><i class="fas fa-chart-pie me-2 text-primary"></i> État Global</h6>
+            <div class="mb-2 d-flex justify-content-between">
+                <span class="small">Hors session :</span>
+                <span class="badge bg-secondary rounded-pill">{{ dossiers_hors_vague }}</span>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,207 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bibliothèque{% endblock %} | ESCEP-NIGER</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon_escep.png' %}">
+
+    <style>
+        :root {
+            --escep-blue: #003366;
+            --escep-yellow: #FFCC00;
+            --sidebar-width: 260px;
+            --success-color: #28a745;
+        }
+
+        body {
+            background: #f4f7f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: var(--escep-blue);
+            height: 100vh;
+            color: white;
+            width: var(--sidebar-width);
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            background: white;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 3px solid var(--escep-yellow);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .sidebar-logo {
+            max-height: 60px;
+            width: auto;
+        }
+
+        .main-container {
+            margin-left: var(--sidebar-width);
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            background: white;
+            padding: 12px 25px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.7);
+            margin: 4px 15px;
+            border-radius: 10px;
+            padding: 12px 15px;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .nav-link i { width: 25px; }
+
+        .nav-link:hover, .nav-link.active {
+            background: var(--escep-yellow) !important;
+            color: var(--escep-blue) !important;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-section-title {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.3);
+            margin: 25px 25px 10px;
+            font-weight: bold;
+        }
+
+        .badge-role {
+            background: #eef2f7;
+            color: var(--escep-blue);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            border: 1px solid var(--escep-blue);
+            font-size: 0.85rem;
+        }
+
+        .messages-container {
+            position: fixed;
+            top: 80px;
+            right: 25px;
+            z-index: 1050;
+            min-width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar shadow">
+        <div class="sidebar-header">
+            <img src="{% static 'img/logo_escep.png' %}" alt="Logo ESCEP" class="sidebar-logo">
+        </div>
+
+        <nav class="nav flex-column mt-3 pb-5">
+            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'app_bibliotheque:dashboard' %}">
+                <i class="fas fa-th-large me-2"></i> Dashboard
+            </a>
+
+            <div class="nav-section-title">Gestion des Mémoires</div>
+            <a class="nav-link {% if 'memoires' in request.path %}active{% endif %}" href="{% url 'app_bibliotheque:liste_memoires_attente' %}">
+                <i class="fas fa-graduation-cap me-2"></i> Publication Memoires
+            </a>
+
+
+
+            <div class="nav-section-title">Catalogue des Livres</div>
+                   <a class="nav-link {% if 'categories' in request.path %}active{% endif %}" href="{% url 'app_bibliotheque:gestion_categories' %}">
+    <i class="fas fa-tags me-2"></i> Gérer les Catégories
+</a>
+
+            <a class="nav-link {% if request.resolver_match.url_name == 'liste_livres' %}active{% endif %}" href="{% url 'app_bibliotheque:liste_livres' %}">
+                <i class="fas fa-book me-2"></i> Tous les Livres
+            </a>
+            <a class="nav-link {% if 'ajouter_livre' in request.path %}active{% endif %}" href="{% url 'app_bibliotheque:ajouter_livre' %}">
+                <i class="fas fa-plus-circle me-2"></i> Ajouter un Livre
+            </a>
+
+            <div class="nav-section-title">Compte</div>
+            <a class="nav-link text-danger mt-4" href="{% url 'app_auth:logout' %}">
+                <i class="fas fa-sign-out-alt me-2"></i> Déconnexion
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-container">
+        <div class="topbar shadow-sm">
+            <div class="d-flex align-items-center">
+                <span class="badge-role">
+                    <i class="fas fa-book-reader me-2"></i>ESPACE : BIBLIOTHÈQUE
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center">
+                <div class="text-end me-3 d-none d-md-block">
+                    <div class="fw-bold text-dark">{{ request.user.get_full_name|default:request.user.username }}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">Bibliothécaire</small>
+                </div>
+                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 position-relative">
+            {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-lg mb-2" role="alert">
+                    <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        setTimeout(function() {
+            let alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                let bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

@@ -1,110 +1,142 @@
 {% extends 'base_chef.html' %}
+{% load static %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
-        <div class="card-header bg-primary bg-gradient text-white p-4 text-center">
-            <h3 class="mb-0 fw-bold"><i class="fas fa-print me-3"></i>Génération des Rapports Officiels</h3>
-            <p class="mb-0 opacity-75">Sélectionnez le type de document et le format d'exportation</p>
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-primary bg-gradient text-white p-4">
+            <h4 class="mb-0 fw-bold"><i class="fas fa-file-invoice me-3"></i>Générateur de Rapports & Aperçu</h4>
+            <p class="mb-0 opacity-75 small">Prévisualisez vos données avant l'exportation officielle</p>
         </div>
 
-        <div class="card-body p-4 p-lg-5 bg-white">
-            <form action="{% url 'administration:exporter_rapport_complet' %}" method="GET">
-                <div class="row justify-content-center">
-                    <div class="col-md-10">
-                        
-                        <div class="mb-5 text-center">
-                            <label class="h5 fw-bold mb-3 d-block text-muted">Que voulez-vous générer ?</label>
-                            <div class="btn-group w-100" role="group">
-                                <input type="radio" class="btn-check" name="type" id="type_themes" value="themes" checked onclick="toggleUI()">
-                                <label class="btn btn-outline-primary py-3 fw-bold shadow-sm" for="type_themes">
-                                    <i class="fas fa-book-open me-2"></i>LISTE DES THÈMES
-                                </label>
+        <div class="card-body p-4 bg-white">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="h6 fw-bold text-muted">Type de document</label>
+                    <select name="type" id="type_select" class="form-select border-0 bg-light" onchange="toggleUI()">
+                        <option value="themes" {% if request.GET.type == 'themes' %}selected{% endif %}>LISTE DES THÈMES</option>
+                        <option value="planning" {% if request.GET.type == 'planning' or not request.GET.type %}selected{% endif %}>PLANNING PUBLIC</option>
+                    </select>
+                </div>
 
-                                <input type="radio" class="btn-check" name="type" id="type_planning" value="planning" onclick="toggleUI()">
-                                <label class="btn btn-outline-primary py-3 fw-bold shadow-sm" for="type_planning">
-                                    <i class="fas fa-calendar-check me-2"></i>PLANNING PUBLIC
-                                </label>
-                            </div>
-                        </div>
+                <div class="col-md-3" id="div_vague">
+                    <label class="h6 fw-bold text-muted">Session (Vague)</label>
+                    <select name="vague" class="form-select border-0 bg-light">
+                        <option value="">Choisir une session...</option>
+                        {% for v in vagues %}
+                        <option value="{{ v.id }}" {% if request.GET.vague == v.id|stringformat:"s" %}selected{% endif %}>{{ v.libelle }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-                        <div class="row g-4 border rounded-4 p-4 bg-light shadow-sm">
-                            <div class="col-md-6" id="div_vague" style="display: none;">
-                                <label class="form-label fw-bold text-primary"><i class="fas fa-layer-group me-1"></i>Session (Vague)</label>
-                                <select name="vague" class="form-select border-0 shadow-sm">
-                                    {% for v in vagues %}
-                                    <option value="{{ v.id }}">{{ v.libelle }} ({{ v.date_creation.year }})</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text text-danger small"><i class="fas fa-info-circle me-1"></i>Filtre obligatoire pour le planning.</div>
-                            </div>
+                <div class="col-md-3" id="div_annee" style="display:none;">
+                    <label class="h6 fw-bold text-muted">Année Scolaire</label>
+                    <select name="annee" class="form-select border-0 bg-light">
+                        {% for a in toutes_les_annees %}
+                        <option value="{{ a.id }}" {% if request.GET.annee == a.id|stringformat:"s" %}selected{% endif %}>{{ a.libelle }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-                            <div class="col-md-6" id="div_annee">
-                                <label class="form-label fw-bold text-primary"><i class="fas fa-graduation-cap me-1"></i>Année Scolaire</label>
-                                <select name="annee" class="form-select border-0 shadow-sm">
-                                    {% for a in toutes_les_annees %}
-                                    <option value="{{ a.id }}">{{ a.libelle }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                <div class="col-md-3">
+                    <label class="h6 fw-bold text-muted">Filière</label>
+                    <select name="filiere" class="form-select border-0 bg-light">
+                        <option value="">Toutes les filières</option>
+                        {% for f in filieres %}
+                        <option value="{{ f.id }}" {% if request.GET.filiere == f.id|stringformat:"s" %}selected{% endif %}>{{ f.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-primary"><i class="fas fa-tags me-1"></i>Filière</label>
-                                <select name="filiere" class="form-select border-0 shadow-sm">
-                                    <option value="">Toutes les filières</option>
-                                    {% for f in filieres %}
-                                    <option value="{{ f.id }}">{{ f.nom }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mt-5">
-                            <label class="h5 fw-bold mb-3 d-block text-center text-muted">Choisir le format d'exportation</label>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <button type="submit" name="format" value="excel" class="btn btn-success btn-lg w-100 rounded-pill shadow py-3 fw-bold transition-hover">
-                                        <i class="fas fa-file-excel me-2"></i> TÉLÉCHARGER EN EXCEL
-                                    </button>
-                                </div>
-                                <div class="col-md-6">
-                                    <button type="submit" name="format" value="word" class="btn btn-primary btn-lg w-100 rounded-pill shadow py-3 fw-bold transition-hover">
-                                        <i class="fas fa-file-word me-2"></i> GÉNÉRER DOCUMENT WORD
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-dark w-100 rounded-pill fw-bold">
+                        <i class="fas fa-eye me-2"></i>Afficher l'aperçu
+                    </button>
                 </div>
             </form>
         </div>
     </div>
+
+    {% if dossiers is not None %}
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+            <h5 class="fw-bold mb-0 text-primary">Aperçu du document</h5>
+            
+            {% if dossiers %}
+            <div class="d-flex gap-2">
+                <a href="{% url 'administration:exporter_rapport_complet' %}?type={{ request.GET.type }}&vague={{ request.GET.vague }}&annee={{ request.GET.annee }}&filiere={{ request.GET.filiere }}&format=excel" 
+                   class="btn btn-success btn-sm rounded-pill px-3">
+                    <i class="fas fa-file-excel me-1"></i> Excel
+                </a>
+                <a href="{% url 'administration:exporter_rapport_complet' %}?type={{ request.GET.type }}&vague={{ request.GET.vague }}&annee={{ request.GET.annee }}&filiere={{ request.GET.filiere }}&format=word" 
+                   class="btn btn-primary btn-sm rounded-pill px-3">
+                    <i class="fas fa-file-word me-1"></i> Word
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        {% if request.GET.type == 'themes' %}
+                            <th class="ps-4">Matricule</th>
+                            <th>Étudiant</th>
+                            <th>Classe</th>
+                            <th>Thème</th>
+                            <th>Encadreur</th>
+                        {% else %}
+                            <th class="ps-4">Date & Heure</th>
+                            <th>Étudiant</th>
+                            <th>Classe</th>
+                            <th>Thème</th>
+                            <th class="text-center">Salle</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in dossiers %}
+                    <tr>
+                        {% if request.GET.type == 'themes' %}
+                            <td class="ps-4 small">{{ d.etudiant.matricule }}</td>
+                            <td class="fw-bold">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ d.etudiant.classe.nom }}</span></td>
+                            <td class="small" style="max-width: 300px;">{{ d.theme }}</td>
+                            <td class="small">{{ d.encadreur|default:"-" }}</td>
+                        {% else %}
+                            <td class="ps-4">
+                                <div class="fw-bold text-primary">{{ d.soutenance.date|date:"d/m/Y" }}</div>
+                                <div class="small text-muted">{{ d.soutenance.heure|time:"H:i" }}</div>
+                            </td>
+                            <td class="fw-bold">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ d.etudiant.classe.nom }}</span></td>
+                            <td class="small" style="max-width: 300px;">{{ d.theme }}</td>
+                            <td class="text-center"><span class="badge bg-dark rounded-pill">{{ d.soutenance.salle }}</span></td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <i class="fas fa-search-minus fa-3x text-light mb-3"></i>
+                            <p class="text-muted">Aucune donnée ne correspond à votre sélection.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
-<style>
-    /* Effet au survol des boutons */
-    .transition-hover:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-        transition: all 0.3s ease;
-    }
-    .btn-check:checked + .btn-outline-primary {
-        background-color: var(--bs-primary);
-        color: white;
-    }
-</style>
-
 <script>
-/**
- * Alterne l'affichage des champs selon le type de document sélectionné
- */
 function toggleUI() {
-    const isPlanning = document.getElementById('type_planning').checked;
+    const type = document.getElementById('type_select').value;
     const divVague = document.getElementById('div_vague');
     const divAnnee = document.getElementById('div_annee');
 
-    if (isPlanning) {
+    if (type === 'planning') {
         divVague.style.display = 'block';
         divAnnee.style.display = 'none';
     } else {
@@ -112,8 +144,11 @@ function toggleUI() {
         divAnnee.style.display = 'block';
     }
 }
-
-// Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', toggleUI);
 </script>
+
+<style>
+    .table thead th { font-weight: 700; font-size: 0.75rem; }
+    .bg-primary-gradient { background: linear-gradient(45deg, #003366, #004080); }
+</style>
 {% endblock %}

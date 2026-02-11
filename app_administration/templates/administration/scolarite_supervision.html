@@ -1,0 +1,47 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-header bg-white py-3">
+        <h5 class="fw-bold mb-0 text-primary">Aperçu Superadmin - Scolarité</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">Matricule</th>
+                    <th>Étudiant</th>
+                    <th>Département</th>
+                    <th class="text-center">Semestres</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in etudiants %}
+                <tr>
+                    <td class="ps-4 fw-bold">{{ e.matricule|slice:":4" }}...</td>
+                    <td>{{ e.nom }} {{ e.prenom }}</td>
+                    <td><span class="badge bg-light text-dark">{{ e.classe.filiere.departement.nom }}</span></td>
+                    <td class="text-center">
+                        {% if e.dossier.is_semestres_valides %}
+                            <span class="text-success fw-bold"><i class="fas fa-check me-1"></i> OK</span>
+                        {% else %}
+                            <span class="text-danger fw-bold"><i class="fas fa-clock me-1"></i> Attente</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if not e.dossier.is_soutenu %}
+                        <a href="{% url 'administration:de_action_toggle_scolarite' e.matricule %}" class="btn btn-sm btn-outline-primary rounded-pill">
+                            Changer Statut
+                        </a>
+                        {% else %}
+                        <span class="text-muted small italic">Soutenu (Verrouillé)</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

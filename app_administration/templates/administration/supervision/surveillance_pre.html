@@ -1,0 +1,82 @@
+{% extends 'administration/base_de.html' %}
+{% block content %}
+<div class="container-fluid">
+    <h4 class="fw-bold text-primary mb-4">Supervision : Pré-dépôts (Avant Soutenance)</h4>
+    
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="small fw-bold text-muted">MATRICULE</label>
+                    <input type="text" name="matricule" class="form-control border-0 bg-light" value="{{ q_matricule }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="small fw-bold text-muted">FILIÈRE</label>
+                    <select name="filiere" class="form-select border-0 bg-light" onchange="this.form.submit()">
+                        <option value="">Toutes</option>
+                        {% for f in filieres %}<option value="{{ f.id }}" {% if request.GET.filiere == f.id|stringformat:"s" %}selected{% endif %}>{{ f.nom }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="small fw-bold text-muted">CLASSE</label>
+                    <select name="classe" class="form-select border-0 bg-light">
+                        <option value="">Toutes</option>
+                        {% for c in classes %}<option value="{{ c.id }}" {% if request.GET.classe == c.id|stringformat:"s" %}selected{% endif %}>{{ c.nom }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="small fw-bold text-muted">ANNÉE</label>
+                    <select name="annee_scolaire" class="form-select border-0 bg-light">
+                        <option value="">Toutes</option>
+                        {% for a in annees %}<option value="{{ a.id }}" {% if request.GET.annee_scolaire == a.id|stringformat:"s" %}selected{% endif %}>{{ a.libelle }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3">Filtrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <table class="table align-middle mb-0">
+            <thead class="bg-primary text-white">
+                <tr>
+                    <th class="ps-4">Matricule</th>
+                    <th>Étudiant</th>
+                    <th>Fichier PDF</th>
+                    <th class="text-center">Action DE</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in dossiers %}
+                <tr class="bg-white">
+                    <td class="ps-4 fw-bold">{{ d.etudiant.matricule|slice:":4" }}</td>
+                    <td class="text-uppercase small fw-bold">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</td>
+                    <td>
+                        {% if d.fichier_pre_depot %}
+                            <a href="{{ d.fichier_pre_depot.url }}" target="_blank" class="btn btn-sm btn-link text-danger"><i class="fas fa-file-pdf"></i> Voir</a>
+                        {% else %}
+                            <span class="text-muted small">Aucun fichier</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <form action="{% url 'gestion_interne:action_save_pdf' d.id %}" method="POST" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            {% if d.fichier_pre_depot %}
+                                <button type="submit" name="delete" class="btn btn-sm btn-outline-danger px-3 rounded-pill">Supprimer</button>
+                            {% else %}
+                                <input type="file" name="fichier_pdf" class="form-control-sm" required>
+                                <button type="submit" class="btn btn-sm btn-primary rounded-pill">Uploader</button>
+                            {% endif %}
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center py-5">Utilisez les filtres.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

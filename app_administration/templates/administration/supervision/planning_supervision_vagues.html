@@ -1,0 +1,38 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="alert alert-warning border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4">
+        <div>
+            <i class="fas fa-calendar-alt me-2"></i> 
+            Supervision Planning : <strong>Sessions de {{ chef_dept.nom }}</strong>
+        </div>
+        <a href="{% url 'administration:accueil_chef' %}" class="btn btn-sm btn-light rounded-pill border">
+            <i class="fas fa-university me-1"></i> Départements
+        </a>
+    </div>
+
+    <div class="row g-3">
+        {% for vague in vagues %}
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-1">{{ vague.libelle }}</h5>
+                        <p class="text-muted small mb-0">Créée le : {{ vague.date_creation|date:"d/m/Y" }}</p>
+                    </div>
+                    <a href="{% url 'administration:planning_vague_detail' vague.id %}?dept_id={{ chef_dept.id }}" 
+                       class="btn btn-primary rounded-pill px-4">
+                        Gérer le Planning
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <p class="text-muted italic">Aucune session de soutenance pour ce département.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,199 +1,231 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESCEP NIGER - Administration</title>
+    <title>ESCEP NIGER - Administration </title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    
+    <link rel="icon" type="image/png" href="{% static 'img/favicon_escep.png' %}">    
+
     <style>
         :root {
-            --escep-blue: #2e5eb7;    /* Bleu du logo */
-            --escep-yellow: #f2e300;  /* Jaune du logo */
-            --escep-red: #d93025;     /* Rouge du logo */
-            --escep-light: #f8f9fa;
+            --escep-blue: #2e5eb7;
+            --escep-yellow: #f2e300;
+            --sidebar-width: 280px;
         }
 
         body {
             background-color: #f4f6f9;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
         }
 
-        /* Sidebar Style */
+        /* Sidebar avec Scrollbar fine */
         .sidebar {
-            min-height: 100vh;
+            width: var(--sidebar-width);
+            height: 100vh;
             background-color: var(--escep-blue);
             color: white;
-            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            overflow-y: auto;
         }
+
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
 
         .logo-section {
             background-color: white;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
             border-bottom: 5px solid var(--escep-yellow);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation & Sous-menus */
         .nav-link {
             color: rgba(255, 255, 255, 0.8) !important;
-            padding: 12px 20px;
-            transition: all 0.3s;
-            border-left: 5px solid transparent;
-            font-weight: 500;
-        }
-
-        .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white !important;
-            border-left: 5px solid var(--escep-yellow);
-        }
-
-        .nav-link.active {
-            background-color: rgba(0, 0, 0, 0.2);
-            color: white !important;
-            border-left: 5px solid var(--escep-yellow);
-        }
-
-        .nav-link i {
-            width: 25px;
-        }
-
-        /* Main Content */
-        .top-bar {
-            background-color: white;
-            height: 70px;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 10px 20px;
+            transition: 0.3s;
+            border-left: 4px solid transparent;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
-            padding: 0 30px;
+            cursor: pointer;
         }
 
-        .btn-escep-blue {
-            background-color: var(--escep-blue);
-            color: white;
+        .nav-link:hover, .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            border-left: 4px solid var(--escep-yellow);
         }
 
-        .btn-escep-yellow {
-            background-color: var(--escep-yellow);
-            color: #333;
-            border: none;
+        .submenu {
+            background-color: rgba(0, 0, 0, 0.15);
+            padding-left: 15px;
+            list-style: none;
+            display: none; /* Fermé par défaut */
         }
 
-        .text-escep-red {
-            color: var(--escep-red);
+        .submenu.show { display: block; }
+
+        .submenu .nav-link {
+            font-size: 0.85rem;
+            padding: 8px 20px;
+            border-left: none;
         }
 
-        /* Badge personnalise */
-        .badge-escep {
-            background-color: var(--escep-yellow);
-            color: black;
+        .rotate-icon {
+            transition: 0.3s;
+            margin-left: auto;
+        }
+
+        .collapsed .rotate-icon { transform: rotate(-90deg); }
+
+        .section-header {
+            padding: 15px 20px 5px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
         }
     </style>
 </head>
 <body>
 
-<div class="container-fluid">
-    <div class="row">
-        <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar p-0">
-            <div class="logo-section">
-                {% load static %}
-                <img src="{% static 'img/logo_escep.png' %}" alt="Logo ESCEP" class="img-fluid">
-            </div>
-            
-            <div class="pt-4">
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_de' %}active{% endif %}" href="{% url 'administration:dashboard_de' %}">
-                            <i class="fas fa-th-large"></i> Tableau de bord
-                        </a>
-                    </li>
+<div class="sidebar">
+    <div class="logo-section">
+        <img src="{% static 'img/logo_escep.png' %}" alt="Logo ESCEP" class="img-fluid" style="max-height: 50px;">
+    </div>
+    
+    <div class="pt-3 pb-5">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link {% if 'dashboard' in request.path %}active{% endif %}" href="{% url 'administration:dashboard_de' %}">
+                    <i class="fas fa-chart-line me-3"></i> Tableau de bord
+                </a>
+            </li>
 
-                    <div class="px-3 mt-3 mb-2 text-uppercase small opacity-50 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Structure</div>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'annees' in request.path %}active{% endif %}" href="{% url 'administration:liste_annees' %}">
-                            <i class="fas fa-calendar-alt"></i> Années Scolaires
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'departements' in request.path %}active{% endif %}" href="{% url 'administration:liste_departements' %}">
-                            <i class="fas fa-sitemap"></i> Départements
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'filieres' in request.path %}active{% endif %}" href="{% url 'administration:liste_filieres' %}">
-                            <i class="fas fa-book"></i> Filières 
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'classes' in request.path %}active{% endif %}" href="{% url 'administration:liste_classes' %}">
-                            <i class="fas fa-layer-group"></i> Classes
-                        </a>
-                    </li>
-
-                    <div class="px-3 mt-3 mb-2 text-uppercase small opacity-50 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Soutenances</div>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'vagues' in request.path %}active{% endif %}" href="{% url 'administration:liste_vagues' %}">
-                            <i class="fas fa-calendar-check"></i> Vagues de mémoire
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'validation' in request.path %}active{% endif %}" href="{% url 'administration:validation_jury_liste' %}">
-                            <i class="fas fa-user-check"></i> Validation Jurys
-                            {% if nb_attente_validation > 0 %}
-                                <span class="badge rounded-pill bg-danger ms-1" style="font-size: 0.6rem;">{{ nb_attente_validation }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-
-      
-
-                    <div class="px-3 mt-3 mb-2 text-uppercase small opacity-50 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Utilisateurs</div>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'chefs' in request.path %}active{% endif %}" href="{% url 'administration:liste_chefs' %}">
-                            <i class="fas fa-user-tie"></i> Chefs de Départements
-                        </a>
-                    </li>
-
-                    <li class="nav-item mt-5">
-                        <a class="nav-link text-escep-red" href="/admin/logout/">
-                            <i class="fas fa-power-off"></i> Déconnexion
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
-        <main class="col-md-9 ms-sm-auto col-lg-10 p-0">
-            <div class="top-bar justify-content-between">
-                <span class="fw-bold text-secondary">SYSTÈME DE GESTION DES MÉMOIRES</span>
-                <div class="user-info">
-                    <span class="badge bg-light text-dark p-2 border">
-                        <i class="fas fa-user-circle text-escep-blue me-1"></i> 
-                        Directeur des Études
-                    </span>
+            <div class="section-header">Structure</div>
+            <li class="nav-item">
+                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#menuAcadémique">
+                    <i class="fas fa-university me-3"></i> Académique
+                    <i class="fas fa-chevron-down rotate-icon"></i>
+                </a>
+                <div class="collapse submenu {% if 'etudiant' in request.path or 'classe' in request.path %}show{% endif %}" id="menuAcadémique">
+                    <a class="nav-link" href="{% url 'administration:liste_etudiants' %}">Base Étudiants</a>
+                    <a class="nav-link" href="{% url 'administration:liste_filieres' %}">Filières</a>
+                    <a class="nav-link" href="{% url 'administration:liste_classes' %}">Classes</a>
+                    <a class="nav-link" href="{% url 'administration:liste_annees' %}">Années Scolaires</a>
                 </div>
-            </div>
+            </li>
 
-            <div class="p-4">
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
-                            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
+              <div class="section-header">Pilotage Départements</div>
+            <li class="nav-item">
+                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#menuDepts">
+                    <i class="fas fa-users-cog me-3"></i> Départements
+                    <i class="fas fa-chevron-down rotate-icon"></i>
+                </a>
+                <div class="collapse submenu" id="menuDepts">
+                    <a class="nav-link" href="{% url 'administration:accueil_chef' %}">Supervision Générale</a>
+                    <a class="nav-link" href="{% if chef_dept %}{% url 'administration:liste_themes_etudiants' %}?dept_id={{ chef_dept.id }}{% else %}{% url 'administration:accueil_chef' %}{% endif %}">Thèmes & Inscriptions</a>
+                    <a class="nav-link" href="{% if chef_dept %}{% url 'administration:planning_liste_vagues' %}?dept_id={{ chef_dept.id }}{% else %}{% url 'administration:accueil_chef' %}{% endif %}">Planning Soutenances</a>
+                    <a class="nav-link" href="{% if chef_dept %}{% url 'administration:liste_jurys_chef' %}?dept_id={{ chef_dept.id }}{% else %}{% url 'administration:accueil_chef' %}{% endif %}">Base des Jurys</a>
+                </div>
+            </li>
 
-                {% block content %}
-                {% endblock %}
-            </div>
-        </main>
+              <div class="section-header">Contrôle & Depôt</div>
+            <li class="nav-item">
+                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#menuSupervision">
+                    <i class="fas fa-shield-alt me-3"></i> Supervision
+                    <i class="fas fa-chevron-down rotate-icon"></i>
+                </a>
+                <div class="collapse submenu" id="menuSupervision">
+                    <a class="nav-link" href="{% url 'gestion_interne:scolarite_etudiants' %}">Scolarité</a>
+                    <a class="nav-link" href="{% url 'gestion_interne:liste_etudiants_comptabilite' %}">Comptabilité</a>
+                    <a class="nav-link" href="{% url 'gestion_interne:surveillant_pre_depot' %}">Dépôts PDF (Pré)</a>
+                    <a class="nav-link" href="{% url 'gestion_interne:post_depot_liste' %}">Archives PDF (Post)</a>
+                </div>
+            </li>
+                        <div class="section-header">Soutenances</div>
+
+            <li class="nav-item">
+                <a class="nav-link d-flex justify-content-between align-items-center {% if 'validation-jurys' in request.path %}active{% endif %}" href="{% url 'administration:validation_jury_liste' %}">
+                    <span><i class="fas fa-check-double me-3"></i> Validation Jurys</span>
+                    {% if nb_attente_validation > 0 %}
+                    <span class="badge rounded-pill bg-danger shadow-sm">{{ nb_attente_validation }}</span>
+                    {% endif %}
+                </a>
+            </li>
+
+          
+
+            <div class="section-header">Bibliothèque</div>
+            <li class="nav-item">
+                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#menuBiblio">
+                    <i class="fas fa-book-reader me-3"></i> Biblio & Mémoires
+                    <i class="fas fa-chevron-down rotate-icon"></i>
+                </a>
+                <div class="collapse submenu" id="menuBiblio">
+                 <a class="nav-link" href="{% url 'app_bibliotheque:liste_memoires_attente' %}">Supervision Mémoires</a>
+                    <a class="nav-link" href="{% url 'app_bibliotheque:gestion_categories' %}">categorie des livres</a>
+
+                    <a class="nav-link" href="{% url 'app_bibliotheque:liste_livres' %}"> Livres</a>
+                </div>
+            </li>
+
+            <div class="section-header">Paramètres</div>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'administration:liste_utilisateurs' %}">
+                    <i class="fas fa-user-lock me-3"></i> Utilisateurs
+                </a>
+            </li>
+
+            <li class="nav-item mt-4">
+                <a class="nav-link text-warning" href="{% url 'app_auth:logout' %}">
+                    <i class="fas fa-power-off me-3"></i> Déconnexion
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="main-wrapper">
+    <div class="top-bar justify-content-between shadow-sm">
+        <span class="fw-bold text-secondary d-none d-lg-inline">ECOLE SUPERIEURE DE COMMUNICATIONS ELECTRONIQUE ET DE LA POSTE</span>
+        <div class="user-info d-flex align-items-center">
+            <span class="badge bg-primary bg-opacity-10 text-primary p-2 border border-primary border-opacity-25 rounded-pill">
+                <i class="fas fa-user-shield me-1"></i> Directeur des Études
+            </span>
+        </div>
+    </div>
+
+    <div class="p-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm rounded-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
     </div>
 </div>
 

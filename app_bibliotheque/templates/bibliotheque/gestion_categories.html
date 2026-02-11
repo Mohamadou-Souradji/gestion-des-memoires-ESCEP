@@ -1,0 +1,142 @@
+{% extends 'base_bibliotheque.html' %}
+
+{% block title %}Gestion des Catégories{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">Rayonnages & Catégories</h3>
+            <p class="text-muted small">Gérez les thématiques pour le classement des ouvrages</p>
+        </div>
+        <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCategorie" onclick="prepareAdd()">
+            <i class="fas fa-plus-circle me-2"></i>Nouvelle Catégorie
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase small fw-bold">Nom de la catégorie</th>
+                        <th class="py-3 text-uppercase small fw-bold">Description</th>
+                        <th class="py-3 text-uppercase small fw-bold text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in categories %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
+                                    <i class="fas fa-tag text-primary"></i>
+                                </div>
+                                <span class="fw-bold text-dark">{{ cat.nom }}</span>
+                            </div>
+                        </td>
+                        <td class="text-muted">{{ cat.description|default:"Aucune description"|truncatechars:100 }}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary border-0 rounded-3 me-2"
+                                    onclick="prepareEdit('{{ cat.id }}', '{{ cat.nom|escapejs }}', '{{ cat.description|escapejs }}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger border-0 rounded-3"
+                                    onclick="prepareDelete('{{ cat.id }}', '{{ cat.nom|escapejs }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-5 text-muted">
+                            <i class="fas fa-folder-open fa-3x mb-3 d-block opacity-25"></i>
+                            Aucune catégorie disponible.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCategorie" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold" id="modalLabel">Nouvelle Catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="categorieForm">
+                {% csrf_token %}
+                <div class="modal-body px-4">
+                    <input type="hidden" name="cat_id" id="cat_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nom de la catégorie</label>
+                        {{ form.nom }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description (Optionnel)</label>
+                        {{ form.description }}
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDelete" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 text-center">
+            <div class="modal-body p-4">
+                <i class="fas fa-exclamation-triangle text-danger fa-3x mb-3"></i>
+                <h5 class="fw-bold">Supprimer ?</h5>
+                <p class="text-muted small">Voulez-vous vraiment supprimer <br><strong id="delete_name"></strong> ?</p>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_id" id="delete_id">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-100" data-bs-dismiss="modal">Non</button>
+                        <button type="submit" class="btn btn-danger w-100">Oui, Supprimer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modalLabel = document.getElementById('modalLabel');
+    const catIdInput = document.getElementById('cat_id');
+    const form = document.getElementById('categorieForm');
+    const inputNom = document.querySelector('[name="nom"]');
+    const inputDesc = document.querySelector('[name="description"]');
+
+    function prepareAdd() {
+        modalLabel.innerText = "Nouvelle Catégorie";
+        catIdInput.value = "";
+        form.reset();
+    }
+
+    function prepareEdit(id, nom, desc) {
+        modalLabel.innerText = "Modifier la catégorie";
+        catIdInput.value = id;
+        inputNom.value = nom;
+        inputDesc.value = desc;
+        var myModal = new bootstrap.Modal(document.getElementById('modalCategorie'));
+        myModal.show();
+    }
+
+    function prepareDelete(id, nom) {
+        document.getElementById('delete_id').value = id;
+        document.getElementById('delete_name').innerText = nom;
+        var delModal = new bootstrap.Modal(document.getElementById('modalDelete'));
+        delModal.show();
+    }
+</script>
+{% endblock %}

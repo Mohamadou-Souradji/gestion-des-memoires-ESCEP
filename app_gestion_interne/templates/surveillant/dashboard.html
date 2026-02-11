@@ -3,117 +3,130 @@
 
 {% block content %}
 <style>
-    /* Imitation stricte de ta charte */
     .stat-card { transition: transform 0.3s ease; border: none !important; position: relative; overflow: hidden; }
     .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
     
-    .notification-dot {
-        position: absolute; top: 10px; right: 10px; width: 12px; height: 12px;
-        border-radius: 50%; background-color: #dc3545; border: 2px solid white;
-    }
-    
     .action-card {
         transition: all 0.3s ease; border: 2px solid #f0f2f5 !important; background: #ffffff;
+        color: inherit; text-decoration: none; display: block;
     }
-    .action-card:hover { 
-        border-color: var(--escep-blue) !important; 
-        background: var(--escep-blue); 
-        color: white !important; 
+    .action-card:hover {
+        border-color: var(--escep-blue) !important;
+        background: var(--escep-blue);
+        color: white !important;
     }
     .action-card:hover .text-muted, .action-card:hover i, .action-card:hover h6, .action-card:hover p { color: white !important; }
-    
+
     .x-small { font-size: 0.75rem; }
-    .progress-thin { height: 6px; border-radius: 10px; }
+    .progress-thin { height: 6px; border-radius: 10px; background-color: #e9ecef; }
 </style>
 
 <div class="container-fluid">
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
             <h3 class="fw-bold mb-1" style="color: var(--escep-blue);">Tableau de Bord Surveillant</h3>
-            <p class="text-muted mb-0">Rôle : <span class="badge bg-primary-subtle text-primary">Gestion des Dépôts PDF</span></p>
+            <p class="text-muted mb-0">Rôle : <span class="badge bg-primary-subtle text-primary">Gestion des Flux PDF</span></p>
         </div>
         <div class="text-end">
             <div class="bg-white border p-2 rounded-4 shadow-sm px-3">
-                <small class="text-muted d-block x-small fw-bold">GLOBALITÉ DES DÉPÔTS</small>
-                <span class="badge bg-dark rounded-pill">{{ total_global }} Dossiers Validés</span>
+                <small class="text-muted d-block x-small fw-bold text-uppercase">Session Active</small>
+                <span class="fw-bold text-primary">{{ total_global_dossiers }} Dossiers au total</span>
             </div>
         </div>
     </div>
 
     <div class="row g-4 mb-4">
         <div class="col-md-3">
-            <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-warning border-5">
+            <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-primary border-5">
                 <div class="d-flex align-items-center">
-                    <div class="bg-warning bg-opacity-10 p-3 rounded-circle me-3">
-                        <i class="fas fa-file-pdf text-warning"></i>
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3">
+                        <i class="fas fa-file-upload text-primary"></i>
                     </div>
                     <div>
-                        <h6 class="text-muted small mb-0 fw-bold">TOTAL ÉLIGIBLES</h6>
-                        <h3 class="fw-bold mb-0">{{ total_eligibles }}</h3>
+                        <h6 class="text-muted x-small mb-0 fw-bold text-uppercase">Pré-dépôts Faits</h6>
+                        <h3 class="fw-bold mb-0">{{ total_pre_depots }}</h3>
                     </div>
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
             <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-success border-5">
                 <div class="d-flex align-items-center">
                     <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3">
-                        <i class="fas fa-check-circle text-success"></i>
+                        <i class="fas fa-check-double text-success"></i>
                     </div>
                     <div>
-                        <h6 class="text-muted small mb-0 fw-bold">DÉPÔTS FAITS</h6>
-                        <h3 class="fw-bold mb-0">{{ total_depots }}</h3>
+                        <h6 class="text-muted x-small mb-0 fw-bold text-uppercase">Post-dépôts Finaux</h6>
+                        <h3 class="fw-bold mb-0">{{ total_post_depots }}</h3>
                     </div>
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
-            <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-danger border-5">
-                {% if total_manquants > 0 %}<div class="notification-dot"></div>{% endif %}
+            <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-warning border-5">
                 <div class="d-flex align-items-center">
-                    <div class="bg-danger bg-opacity-10 p-3 rounded-circle me-3">
-                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                    <div class="bg-warning bg-opacity-10 p-3 rounded-circle me-3">
+                        <i class="fas fa-clock text-warning"></i>
                     </div>
                     <div>
-                        <h6 class="text-muted small mb-0 fw-bold">EN ATTENTE</h6>
-                        <h3 class="fw-bold mb-0">{{ total_manquants }}</h3>
+                        <h6 class="text-muted x-small mb-0 fw-bold text-uppercase">En attente (Pré)</h6>
+                        <h3 class="fw-bold mb-0">{{ total_attente_pre }}</h3>
                     </div>
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
-            <div class="card stat-card shadow-sm rounded-4 p-3 bg-dark text-white">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="text-white-50 x-small mb-1 fw-bold">TAUX DE RÉCEPTION</h6>
-                        <h3 class="fw-bold mb-0">{{ taux_global }}%</h3>
+            <div class="card stat-card shadow-sm rounded-4 p-3 border-start border-dark border-5 bg-light">
+                <div class="d-flex align-items-center">
+                    <div class="bg-dark bg-opacity-10 p-3 rounded-circle me-3">
+                        <i class="fas fa-globe text-dark"></i>
                     </div>
-                    <i class="fas fa-percentage fa-2x opacity-25"></i>
+                    <div>
+                        <h6 class="text-muted x-small mb-0 fw-bold text-uppercase">Publiés / Clos</h6>
+                        <h3 class="fw-bold mb-0">{{ total_publies }}</h3>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-lg-7 mb-4">
+        <div class="col-lg-6 mb-4">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-transparent border-0 pt-4 px-4">
-                    <h5 class="fw-bold mb-0"><i class="fas fa-bolt text-warning me-2"></i>Actions Surveillant</h5>
+                    <h5 class="fw-bold mb-0 text-dark">Actions de Gestion</h5>
                 </div>
                 <div class="card-body p-4">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <a href="{% url 'gestion_interne:surveillant_vagues' %}" class="btn action-card w-100 p-4 rounded-4 text-start text-decoration-none h-100">
-                                <i class="fas fa-upload fa-2x mb-3 text-primary d-block"></i>
-                                <h6 class="fw-bold mb-1">Gérer les Pré-dépôts</h6>
-                                <p class="small text-muted mb-0">Uploader les mémoires numériques.</p>
+                        <div class="col-12">
+                            <a href="{% url 'gestion_interne:surveillant_pre_depot' %}" class="action-card p-3 rounded-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="p-3 bg-primary-subtle rounded-3 me-3 text-primary">
+                                        <i class="fas fa-file-pdf fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0">Phase 1 : Pré-dépôt (Provisoire)</h6>
+                                        <p class="x-small text-muted mb-0">Uploader les mémoires pour validation avant soutenance.</p>
+                                    </div>
+                                    <i class="fas fa-chevron-right ms-auto opacity-50"></i>
+                                </div>
                             </a>
                         </div>
-                        <div class="col-md-6">
-                            <a href="#" class="btn action-card w-100 p-4 rounded-4 text-start text-decoration-none h-100 position-relative">
-                                <i class="fas fa-archive fa-2x mb-3 text-secondary d-block"></i>
-                                <h6 class="fw-bold mb-1">Dépôts Finaux</h6>
-                                <p class="small text-muted mb-0">Archivage après soutenance.</p>
+                        <div class="col-12">
+                            <a href="{% url 'gestion_interne:post_depot_liste' %}" class="action-card p-3 rounded-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="p-3 bg-success-subtle rounded-3 me-3 text-success">
+                                        <i class="fas fa-archive fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0">Phase 2 : Post-dépôt (Final)</h6>
+                                        <p class="x-small text-muted mb-0">Archivage des versions définitives corrigées.</p>
+                                    </div>
+                                    <i class="fas fa-chevron-right ms-auto opacity-50"></i>
+                                </div>
                             </a>
                         </div>
                     </div>
@@ -121,26 +134,25 @@
             </div>
         </div>
 
-        <div class="col-lg-5 mb-4">
+        <div class="col-lg-6 mb-4">
             <div class="card border-0 shadow-sm rounded-4 h-100">
-                <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold mb-0"><i class="fas fa-chart-bar text-primary me-2"></i>Stats par Filière</h5>
-                    <span class="badge bg-light text-dark x-small fw-bold border">TEMPS RÉEL</span>
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0 text-dark">Progression par Filière (Pré-dépôt)</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <tbody>
-                                {% for s in stats %}
+                                {% for s in stats_filiere %}
                                 <tr>
                                     <td class="ps-4 py-3">
-                                        <div class="fw-bold small">{{ s.filiere.nom }}</div>
+                                        <div class="fw-bold small text-uppercase">{{ s.filiere__nom }}</div>
                                         <div class="progress progress-thin mt-1">
-                                            <div class="progress-bar bg-primary" style="width: {{ s.progression }}%"></div>
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ s.taux }}%"></div>
                                         </div>
                                     </td>
                                     <td class="text-end pe-4">
-                                        <span class="fw-bold small text-primary">{{ s.faits }}/{{ s.eligibles }}</span>
+                                        <span class="fw-bold small text-primary">{{ s.total_faits }}/{{ s.total_attendus }}</span>
                                     </td>
                                 </tr>
                                 {% endfor %}

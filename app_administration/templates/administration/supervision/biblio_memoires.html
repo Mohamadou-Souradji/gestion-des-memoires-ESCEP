@@ -1,0 +1,85 @@
+{% extends 'administration/base_de.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-primary">Supervision Centrale : Bibliothèque</h4>
+            <p class="text-muted small">Validation et contrôle de la visibilité des mémoires sur le portail étudiant.</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="small fw-bold text-muted ps-1">RECHERCHE</label>
+                    <input type="text" name="q" class="form-control border-0 bg-light" placeholder="Nom ou Matricule..." value="{{ request.GET.q|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="small fw-bold text-muted ps-1">STATUT</label>
+                    <select name="statut" class="form-select border-0 bg-light">
+                        <option value="">Tous les états</option>
+                        <option value="publie" {% if request.GET.statut == 'publie' %}selected{% endif %}>Publics (Publiés)</option>
+                        <option value="non_publie" {% if request.GET.statut == 'non_publie' %}selected{% endif %}>En attente</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3">Filtrer</button>
+                    <a href="?" class="btn btn-dark rounded-3"><i class="fas fa-sync-alt"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <table class="table align-middle mb-0">
+            <thead class="bg-primary text-white">
+                <tr>
+                    <th class="ps-4">Matricule</th>
+                    <th>Étudiant</th>
+                    <th>Filière & Classe</th>
+                    <th class="text-center">Visibilité</th>
+                    <th class="text-center">Action DE</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in etudiants %}
+                <tr class="bg-white">
+                    <td class="ps-4 fw-bold text-primary">{{ e.matricule|slice:":4" }}</td>
+                    <td class="fw-bold small text-uppercase">{{ e.nom }} {{ e.prenom }}</td>
+                    <td class="small">
+                        <span class="d-block">{{ e.classe.filiere.nom }}</span>
+                        <span class="text-muted" style="font-size: 0.7rem;">{{ e.classe.nom }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if e.dossier.is_publie %}
+                            <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2">
+                                <i class="fas fa-globe me-1"></i> PUBLIC
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2">
+                                <i class="fas fa-eye-slash me-1"></i> MASQUÉ
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'app_bibliotheque:toggle_publication' e.matricule %}" 
+                           class="btn btn-sm {% if e.dossier.is_publie %}btn-outline-danger{% else %}btn-primary{% endif %} rounded-pill px-3">
+                            {% if e.dossier.is_publie %}Retirer{% else %}Publier{% endif %}
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <i class="fas fa-book-open fa-3x mb-3 opacity-25"></i><br>
+                        Aucun mémoire prêt pour la publication trouvé.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

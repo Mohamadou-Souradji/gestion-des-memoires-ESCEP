@@ -1,0 +1,12 @@
+{% extends 'administration/base_de.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="alert alert-primary border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-shield-alt me-2"></i> Supervision Bibliothèque : Catégories</h5>
+    </div>
+
+    {% include 'bibliotheque/includes/categories_content.html' %}
+</div>
+{% endblock %}

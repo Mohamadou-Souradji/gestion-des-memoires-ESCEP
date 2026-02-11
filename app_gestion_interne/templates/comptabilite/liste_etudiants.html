@@ -7,29 +7,22 @@
     <title>Comptabilité | ESCEP-NIGER</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon_escep.png' %}">    
+
     <style>
         :root { --escep-blue: #003366; --escep-yellow: #FFCC00; }
         body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
-
-        /* Navigation Horizontale */
         .navbar-escep { background: white; border-bottom: 3px solid var(--escep-yellow); padding: 10px 0; }
         .navbar-logo { height: 60px; object-fit: contain; }
-
         .top-info-bar { background: var(--escep-blue); color: white; padding: 8px 0; font-size: 0.85rem; }
-
         .card-main { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); background: white; }
-
-        /* Filtres */
         .filter-section { background: white; border-radius: 12px; padding: 20px; border: 1px solid #eee; }
         .form-label-custom { font-size: 0.75rem; font-weight: bold; color: var(--escep-blue); text-transform: uppercase; }
-
-        /* Tableau */
         .table thead { background: var(--escep-blue); color: white; }
         .table thead th { border: none; padding: 15px; font-weight: 500; font-size: 0.85rem; }
         .status-badge { font-size: 0.7rem; padding: 6px 12px; border-radius: 50px; font-weight: bold; }
         .badge-paye { background: #e8f5e9; color: #2e7d32; }
         .badge-attente { background: #fff8e1; color: #f57f17; }
-
         .btn-validate { background: #2e7d32; color: white; border-radius: 50px; font-size: 0.8rem; font-weight: bold; padding: 5px 15px; border: none; }
         .btn-cancel { background: #c62828; color: white; border-radius: 50px; font-size: 0.8rem; font-weight: bold; padding: 5px 15px; border: none; }
         .btn-validate:hover, .btn-cancel:hover { opacity: 0.9; color: white; }
@@ -53,9 +46,18 @@
             </div>
         </div>
     </nav>
-
+<div class="container mt-3">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-4 border-0" role="alert">
+                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
     <div class="container py-4">
-
         <div class="filter-section mb-4 shadow-sm">
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-3">
@@ -81,7 +83,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label-custom">Année Acad.</label>
+                    <label class="form-label-custom">Année Academique</label>
                     <select name="annee" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
                         <option value="">-- Sélectionner --</option>
                         {% for a in annees %}
@@ -107,51 +109,53 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for e in etudiants %}
-                        <tr>
-                            <td class="ps-4 py-3">
-                                <div class="fw-bold text-dark mb-0">{{ e.nom }} {{ e.prenom }}</div>
-                                <code class="small text-primary fw-bold">{{ e.matricule }}</code>
-                            </td>
-                            <td>
-                                <div class="fw-bold text-dark small">{{ e.classe.filiere.code }}</div>
-                                <div class="text-muted" style="font-size: 0.75rem;">{{ e.classe.nom }}</div>
-                            </td>
-                            <td class="text-center">
-                                {% if e.dossier.is_inscription_validee %}
-                                    <span class="status-badge badge-paye"><i class="fas fa-check-circle me-1"></i> PAYÉ</span>
-                                {% else %}
-                                    <span class="status-badge badge-attente"><i class="fas fa-clock me-1"></i> EN ATTENTE</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if e.dossier.is_soutenu %}
-                                    <span class="text-muted small"><i class="fas fa-lock me-1"></i> Verrouillé (Soutenu)</span>
-                                {% else %}
-                                    <a href="{% url 'app_gestion_interne:toggle_inscription' e.matricule %}"
-                                       class="btn {% if e.dossier.is_inscription_validee %}btn-cancel{% else %}btn-validate{% endif %} shadow-sm">
-                                        {% if e.dossier.is_inscription_validee %}ANNULER{% else %}VALIDER{% endif %}
-                                    </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center py-5 text-muted">
-                                <i class="fas fa-search fa-2x mb-3 d-block opacity-25"></i>
-                                Aucun étudiant trouvé pour ces critères.
-                            </td>
-                        </tr>
-                        {% endfor %}
+                        {% if has_filter %}
+                            {% for e in etudiants %}
+                            <tr>
+                                <td class="ps-4 py-3">
+                                    <div class="fw-bold text-dark mb-0 text-uppercase">{{ e.nom }} {{ e.prenom }}</div>
+                                    <code class="small text-primary fw-bold">{{ e.matricule|slice:":4" }}</code>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark small">{{ e.classe.filiere.code }}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">{{ e.classe.nom }}</div>
+                                </td>
+                                <td class="text-center">
+                                    {% if e.dossier.is_inscription_validee %}
+                                        <span class="status-badge badge-paye"><i class="fas fa-check-circle me-1"></i> PAYÉ</span>
+                                    {% else %}
+                                        <span class="status-badge badge-attente"><i class="fas fa-clock me-1"></i> EN ATTENTE</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if e.dossier.is_soutenu %}
+                                        <span class="text-muted small"><i class="fas fa-lock me-1"></i> Verrouillé</span>
+                                    {% else %}
+                                        <form action="{% url 'app_gestion_interne:toggle_inscription' e.matricule %}" method="POST">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                            <button type="submit" class="btn {% if e.dossier.is_inscription_validee %}btn-cancel{% else %}btn-validate{% endif %} shadow-sm">
+                                                {% if e.dossier.is_inscription_validee %}ANNULER{% else %}VALIDER{% endif %}
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-5 text-muted">Aucun résultat trouvé.</td></tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="fas fa-filter fa-2x mb-3 d-block opacity-25"></i>
+                                    Veuillez utiliser les filtres pour afficher la liste.
+                                </td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-
-    <footer class="text-center py-4 text-muted small">
-        &copy; 2026 ESCEP-NIGER | Système de Gestion des Soutenances
-    </footer>
-
 </body>
 </html>
