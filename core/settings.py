@@ -1,15 +1,21 @@
 from pathlib import Path
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-SECRET_KEY = 'django-insecure-v+9o)kff83%rx-#x@trd2h^a7jg2y6h*2bw=mgjgq)#!y=bzep'
+# --- SÉCURITÉ ---
+# On utilise une variable d'environnement sur Render, sinon on garde la clé par défaut
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-v+9o)kff83%rx-#x@trd2h^a7jg2y6h*2bw=mgjgq)#!y=bzep')
+
+# DEBUG doit être False en production sur Render
 DEBUG = os.environ.get("DEBUG", "False") == "True"
-ALLOWED_HOSTS = ['*']
-#X_FRAME_OPTIONS = 'SAMEORIGIN'
-# Application definition
+
+# IMPORTANT : Autoriser les domaines de Render
+ALLOWED_HOSTS = ["*"]
+
+# --- APPLICATIONS ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -18,6 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # Vos applications
     'app_administration',
     'app_gestion_interne',
     'app_depots',
@@ -25,8 +32,10 @@ INSTALLED_APPS = [
     'app_auth',
 ]
 
+# --- MIDDLEWARE ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # INDISPENSABLE pour les fichiers statiques
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -41,7 +50,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -56,15 +65,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+# --- BASE DE DONNÉES ---
+# On utilise dj_database_url pour se connecter automatiquement à la DB Render
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_memoire',
-        'USER': 'user_memoire',
-        'PASSWORD': 'pass_memoire',
-        'HOST': 'db',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        conn_max_age=600
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -74,16 +81,22 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-LANGUAGE_CODE = 'fr-fr' # Mis en français
+# --- INTERNATIONALISATION ---
+LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Gestion des fichiers STATIQUES
-STATIC_URL = 'static/'
+# --- FICHIERS STATIQUES ---
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+# Dossier où collectstatic va rassembler les fichiers (obligatoire pour Render)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Gestion des fichiers MEDIA (PDF des étudiants)
+# Utilisation de WhiteNoise pour servir les fichiers en production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# --- FICHIERS MEDIA (PDF des étudiants) ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
