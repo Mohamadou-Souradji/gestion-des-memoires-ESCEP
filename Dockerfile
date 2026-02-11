@@ -22,6 +22,11 @@ RUN python manage.py collectstatic --noinput
 # 1. Applique les migrations
 # 2. Exécute le script de création d'utilisateurs
 # 3. Lance Gunicorn sur le port dynamique de Render
+# ... (le reste de ton Dockerfile reste identique)
+
 CMD python manage.py migrate --noinput && \
-    python create_admin.py && \
+    python manage.py shell -c "from app_auth.models import User; \
+if not User.objects.filter(username='admin').exists(): \
+    User.objects.create_superuser('admin', 'admin@escep.com', 'admin', role='DE'); \
+    print('Utilisateur DE créé avec succès.')" && \
     gunicorn core.wsgi:application --bind 0.0.0.0:$PORT
