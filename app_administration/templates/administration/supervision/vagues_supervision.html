@@ -3,15 +3,119 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="alert alert-primary border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <i class="fas fa-eye me-2"></i> Supervision : <strong>Département {{ chef_dept.nom }}</strong>
+            <h4 class="fw-bold text-dark mb-1">
+                <i class="fas fa-layer-group text-primary me-2"></i>Gestion des Sessions
+            </h4>
+            <p class="text-muted small mb-0">
+                Supervision du département : <span class="badge bg-primary-subtle text-primary fs-6">{{ chef_dept.nom }}</span>
+            </p>
         </div>
-        <a href="{% url 'administration:accueil_chef' %}" class="btn btn-sm btn-light rounded-pill">
-            <i class="fas fa-exchange-alt me-1"></i> Changer de département
-        </a>
+
+        <div class="d-flex gap-2">
+            {% if not vague_en_cours %}
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddVague">
+                <i class="fas fa-plus me-2"></i>Nouvelle Session
+            </button>
+            {% else %}
+            <div class="badge bg-warning-subtle text-warning border border-warning-alpha p-2 rounded-pill px-3">
+                <i class="fas fa-info-circle me-1"></i> Une session est déjà active
+            </div>
+            {% endif %}
+
+            <a href="{% url 'administration:accueil_chef' %}" class="btn btn-outline-secondary rounded-pill px-3">
+                <i class="fas fa-university me-1"></i> Changer de département
+            </a>
+        </div>
     </div>
 
     {% include 'administration/chef/includes/vagues_content.html' %}
 </div>
+
+<div class="modal fade" id="modalAddVague" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-light border-0 py-3 ps-4">
+                <h5 class="fw-bold mb-0 text-dark">Lancer une session : {{ chef_dept.nom }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="dept_id" value="{{ chef_dept.id }}">
+
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Nom de la session</label>
+                        <select name="libelle" class="form-select bg-light border-0" required>
+                            <option value="" selected disabled>Choisir...</option>
+                            <option value="Première vague">Première vague</option>
+                            <option value="Deuxième vague">Deuxième vague</option>
+                            <option value="Troisième vague">Troisième vague</option>
+                            <option value="Vague de rattrapage">Vague de rattrapage</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-primary">
+                            <i class="fas fa-graduation-cap me-1"></i> Promotions concernées
+                        </label>
+                        <div class="p-3 bg-light rounded-3 border shadow-sm" style="max-height: 160px; overflow-y: auto;">
+                            {% for annee in toutes_les_annees %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="annees_concernees"
+                                       value="{{ annee.id }}" id="annee_de_{{ annee.id }}">
+                                <label class="form-check-label small fw-medium" for="annee_de_{{ annee.id }}">
+                                    Année Scolaire {{ annee.libelle }}
+                                </label>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-2">
+                                <p class="text-muted small mb-0 italic">Aucune promotion trouvée en base.</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted x-small italic">
+                                <i class="fas fa-info-circle me-1"></i> Sélectionnez les promotions autorisées à s'inscrire.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label x-small fw-bold text-uppercase">Date Ouverture</label>
+                            <input type="datetime-local" name="date_ouverture" class="form-control border-0 bg-light py-2" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label x-small fw-bold text-uppercase">Date Clôture</label>
+                            <input type="datetime-local" name="date_fermeture" class="form-control border-0 bg-light py-2" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill py-3 shadow">
+                        CONFIRMER ET OUVRIR LA SESSION
+                    </button>
+                    <button type="button" class="btn btn-link btn-sm w-100 text-muted text-decoration-none" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styles spécifiques pour une interface plus fine */
+    .x-small { font-size: 0.7rem; }
+    .bg-light { background-color: #f8f9fa !important; }
+    .form-check-input:checked { background-color: #0d6efd; border-color: #0d6efd; }
+
+    /* Animation pour le badge de session active */
+    .border-warning-alpha { border-color: rgba(255, 193, 7, 0.3) !important; }
+</style>
+
 {% endblock %}

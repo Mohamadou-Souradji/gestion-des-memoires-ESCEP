@@ -2,68 +2,254 @@
 {% load static %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="alert alert-primary border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 pt-3">
+        <h4 class="fw-bold" style="color: var(--escep-blue);">
+            <i class="fas fa-microscope me-2 text-warning"></i>Supervision : {{ chef_dept.nom }}
+        </h4>
         <div>
-            <i class="fas fa-microscope me-2"></i> Supervision des Thèmes : <strong>{{ chef_dept.nom }}</strong>
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#modalTheme" onclick="resetForm()">
+                <i class="fas fa-plus me-2"></i>Ajouter un Thème
+            </button>
+            <a href="{% url 'administration:accueil_chef' %}" class="btn btn-outline-secondary rounded-pill px-3">
+                <i class="fas fa-exchange-alt me-1"></i> Changer Dept
+            </a>
         </div>
-        <a href="{% url 'administration:accueil_chef' %}" class="btn btn-sm btn-light rounded-pill">
-            <i class="fas fa-exchange-alt me-1"></i> Changer de département
-        </a>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card border-0 shadow-sm mb-4 rounded-4">
         <div class="card-body p-3">
             <form method="GET" class="row g-2 align-items-end">
                 <input type="hidden" name="dept_id" value="{{ chef_dept.id }}">
-                
                 <div class="col-md-3">
-                    <label class="small fw-bold text-muted ps-1">RECHERCHE</label>
-                    <input type="text" name="search" class="form-control border-0 bg-light" placeholder="Nom, Prénom ou Matricule" value="{{ request.GET.search|default:'' }}">
+                    <label class="small fw-bold text-muted ps-1 text-uppercase">Recherche</label>
+                    <input type="text" name="search" class="form-control" placeholder="Nom ou Matricule..." value="{{ request.GET.search|default:'' }}">
                 </div>
-                <div class="col-md-2">
-                    <label class="small fw-bold text-muted ps-1">FILIÈRE</label>
-                    <select name="filiere" class="form-select border-0 bg-light">
-                        <option value="">Toutes</option>
+                <div class="col-md-3">
+                    <label class="small fw-bold text-muted ps-1 text-uppercase">Filière</label>
+                    <select name="filiere" class="form-select">
+                        <option value="">Toutes les filières...</option>
                         {% for f in filieres %}
-                        <option value="{{ f.id }}" {% if request.GET.filiere == f.id|stringformat:"s" %}selected{% endif %}>{{ f.nom }}</option>
+                        <option value="{{ f.id }}" {% if request.GET.filiere == f.id|stringformat:"i" %}selected{% endif %}>{{ f.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="small fw-bold text-muted ps-1 text-uppercase">Classe</label>
+                    <select name="classe" class="form-select">
+                        <option value="">Toutes les classes...</option>
+                        {% for c in classes_du_dept %}
+                        <option value="{{ c.id }}" {% if request.GET.classe == c.id|stringformat:"i" %}selected{% endif %}>{{ c.nom }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill">Filtrer</button>
+                    <button type="submit" class="btn btn-dark w-100 rounded-3">
+                        <i class="fas fa-filter me-1"></i> Filtrer
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <table class="table align-middle mb-0">
-            <thead class="bg-primary text-white">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light small text-uppercase text-muted">
                 <tr>
-                    <th class="ps-4">Matricule</th>
-                    <th>Étudiant</th>
-                    <th>Thème de mémoire</th>
-                    <th>Encadreur</th>
-                    <th class="text-center">Action</th>
+                    <th class="ps-4 py-3">Étudiant</th>
+                    <th>Thème du Mémoire</th>
+                    <th class="text-center">Validation</th>
+                    <th class="text-center">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for d in dossiers %}
-                <tr class="bg-white">
-                    <td class="ps-4 fw-bold text-primary">{{ d.etudiant.matricule|slice:":4" }}...</td>
-                    <td class="text-uppercase small fw-bold">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</td>
-                    <td class="small" style="max-width: 300px;">{{ d.theme }}</td>
-                    <td class="small">{{ d.encadreur }}</td>
+                <tr>
+                    <td class="ps-4">
+                        <div class="fw-bold text-dark">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</div>
+                        <small class="text-primary fw-bold">{{ d.etudiant.matricule }}</small>
+                        <span class="badge bg-light text-muted border ms-1">{{ d.etudiant.classe.nom_court }}</span>
+                    </td>
+                    <td>
+                        <div class="small fw-medium text-wrap" style="max-width: 450px;">{{ d.theme }}</div>
+                        <div class="mt-1">
+                            <small class="text-muted me-3"><i class="fas fa-user-tie me-1 text-primary"></i>{{ d.encadreur }}</small>
+                            <small class="text-muted"><i class="fas fa-map-marker-alt me-1 text-danger"></i>{{ d.lieu_stage|default:"Non spécifié" }}</small>
+                        </div>
+                    </td>
                     <td class="text-center">
-                        <a href="#" class="btn btn-sm btn-light text-primary rounded-circle"><i class="fas fa-edit"></i></a>
+                        {% if d.is_theme_valide %}
+                            <span class="badge rounded-pill bg-success-subtle text-success border border-success px-3">Validé</span>
+                        {% else %}
+                            <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning px-3">En attente</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                            <button class="btn btn-sm btn-light border-end"
+                                    onclick="editDossier('{{ d.id }}', '{{ d.theme|escapejs }}', '{{ d.encadreur|escapejs }}', '{{ d.lieu_stage|escapejs }}', '{{ d.etudiant.matricule }}')">
+                                <i class="fas fa-edit text-primary"></i>
+                            </button>
+                            <a href="{% url 'administration:supprimer_dossier_chef' d.pk %}"
+                               class="btn btn-sm btn-light"
+                               onclick="return confirm('Supprimer ce dossier ? Cette action est irréversible.')">
+                                <i class="fas fa-trash text-danger"></i>
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="text-center py-5">Aucun thème trouvé pour ce département.</td></tr>
+                <tr><td colspan="4" class="text-center py-5 text-muted">Aucun dossier trouvé.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<div class="modal fade" id="modalTheme" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header text-white border-0" style="background-color: var(--escep-blue);">
+                <h5 class="modal-title fw-bold" id="modalTitle">Nouveau Thème</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{% url 'administration:enregistrer_theme_etudiant' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="dept_id" value="{{ chef_dept.id }}">
+                <input type="hidden" name="dossier_id" id="form-dossier-id">
+                <input type="hidden" name="etudiant_matricule_hidden" id="form-matricule-hidden">
+
+                <div class="modal-body p-4">
+                    <div id="section-selection" class="row g-3 mb-4 bg-light p-3 rounded-4 border shadow-sm">
+                        <div class="col-md-6">
+                            <label class="small fw-bold">1. Filière</label>
+                            <select id="m-filiere" class="form-select border-primary shadow-sm">
+                                <option value="">Choisir...</option>
+                                {% for f in filieres %}<option value="{{ f.id }}">{{ f.nom }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold">2. Année Scolaire</label>
+                            <select id="m-annee" class="form-select border-primary shadow-sm">
+                                <option value="">Choisir...</option>
+                                {% for a in annees_scolaires %}<option value="{{ a.id }}">{{ a.libelle }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold">3. Classe</label>
+                            <select id="m-classe" class="form-select shadow-sm" disabled><option value="">---</option></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold">4. Étudiant</label>
+                            <select id="m-etudiant" name="etudiant_matricule" class="form-select shadow-sm" disabled required><option value="">---</option></select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small fw-bold">Thème du Mémoire</label>
+                        <textarea name="theme" id="form-theme" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="small fw-bold">Encadreur</label><input type="text" name="encadreur" id="form-encadreur" class="form-control" required></div>
+                        <div class="col-md-6"><label class="small fw-bold">Lieu du Stage</label><input type="text" name="lieu_stage" id="form-lieu" class="form-control"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary px-5 rounded-pill">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const selFiliere = document.getElementById('m-filiere');
+const selAnnee = document.getElementById('m-annee');
+const selClasse = document.getElementById('m-classe');
+const selEtudiant = document.getElementById('m-etudiant');
+
+// Cascade 1 : Filière -> Classes
+selFiliere.addEventListener('change', function() {
+    const fId = this.value;
+    if(!fId) return;
+
+    // Correction de l'URL pour correspondre à ton urls.py
+    let url = "{% url 'administration:get_classes' 0 %}".replace('0', fId);
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            selClasse.innerHTML = '<option value="">Choisir la classe...</option>';
+            data.forEach(x => { selClasse.innerHTML += `<option value="${x.id}">${x.nom}</option>`; });
+            selClasse.disabled = false;
+            selEtudiant.disabled = true;
+        });
+});
+
+// Cascade 2 : Classe + Année -> Étudiants
+function chargerEtudiants() {
+    const cId = selClasse.value;
+    const aId = selAnnee.value;
+
+    if (cId && aId) {
+        // Log pour debug
+        console.log("Tentative de chargement : Classe " + cId + " | Année " + aId);
+
+        // URL correspondant à ton urls.py : get-etudiants-par-classe-et-annee/<int:classe_id>/<int:annee_id>/
+        let url = "{% url 'administration:get_etudiants_par_classe_et_annee' 0 999 %}".replace('0', cId).replace('999', aId);
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                console.log("Données reçues :", data);
+                selEtudiant.innerHTML = '<option value="">Choisir l\'étudiant...</option>';
+                if(data.length === 0) {
+                    selEtudiant.innerHTML = '<option value="">Aucun étudiant disponible</option>';
+                } else {
+                    data.forEach(x => {
+                        selEtudiant.innerHTML += `<option value="${x.matricule}">${x.nom} ${x.prenom} (${x.matricule})</option>`;
+                    });
+                    selEtudiant.disabled = false;
+                }
+            })
+            .catch(err => console.error("Erreur Fetch Etudiants:", err));
+    }
+}
+
+selClasse.addEventListener('change', chargerEtudiants);
+selAnnee.addEventListener('change', chargerEtudiants);
+
+function resetForm() {
+    document.getElementById('form-dossier-id').value = '';
+    document.getElementById('modalTitle').innerText = 'Nouveau Thème de Mémoire';
+    document.getElementById('section-selection').classList.remove('d-none');
+    document.getElementById('m-etudiant').name = "etudiant_matricule";
+    document.getElementById('m-etudiant').setAttribute('required', 'required');
+    document.querySelector('#modalTheme form').reset();
+    selClasse.disabled = true;
+    selEtudiant.disabled = true;
+}
+
+function editDossier(id, theme, encadreur, lieu, matricule) {
+    document.getElementById('form-dossier-id').value = id;
+    document.getElementById('form-theme').value = theme;
+    document.getElementById('form-encadreur').value = encadreur;
+    document.getElementById('form-lieu').value = lieu;
+
+    // Mode modification : on change l'étudiant via le matricule caché
+    const hiddenMatricule = document.getElementById('form-matricule-hidden');
+    hiddenMatricule.value = matricule;
+    hiddenMatricule.name = "etudiant_matricule";
+
+    // On désactive le name du select pour éviter les conflits
+    document.getElementById('m-etudiant').name = "";
+
+    document.getElementById('modalTitle').innerText = 'Modifier le Dossier';
+    document.getElementById('section-selection').classList.add('d-none');
+    document.getElementById('m-etudiant').removeAttribute('required');
+
+    new bootstrap.Modal(document.getElementById('modalTheme')).show();
+}
+</script>
 {% endblock %}

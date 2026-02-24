@@ -1,0 +1,89 @@
+<div class="modal fade" id="editVague{{ v.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-light border-0 py-3 ps-4">
+                <h5 class="fw-bold mb-0">Modifier la session</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{% url 'administration:modifier_vague' v.id %}" method="POST">
+                {% csrf_token %}
+                {% if is_de %}
+                    <input type="hidden" name="dept_id" value="{{ chef_dept.id }}">
+                {% endif %}
+
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Libellé</label>
+                        <select name="libelle" class="form-select bg-light border-0" required>
+                            <option value="Première vague" {% if v.libelle == "Première vague" %}selected{% endif %}>Première vague</option>
+                            <option value="Deuxième vague" {% if v.libelle == "Deuxième vague" %}selected{% endif %}>Deuxième vague</option>
+                            <option value="Troisième vague" {% if v.libelle == "Troisième vague" %}selected{% endif %}>Troisième vague</option>
+                            <option value="Vague de rattrapage" {% if v.libelle == "Vague de rattrapage" %}selected{% endif %}>Vague de rattrapage</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-primary">Promotions autorisées</label>
+                        <div class="p-3 bg-light rounded-3 border shadow-sm" style="max-height: 150px; overflow-y: auto;">
+                            {% for annee in toutes_les_annees %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="annees_concernees"
+                                       value="{{ annee.id }}" id="edit_annee_{{ v.id }}_{{ annee.id }}"
+                                       {% if annee in v.annees_concernees.all %}checked{% endif %}>
+                                <label class="form-check-label small fw-medium" for="edit_annee_{{ v.id }}_{{ annee.id }}">
+                                    Promotion {{ annee.libelle }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label x-small fw-bold">Ouverture</label>
+                            <input type="datetime-local" name="date_ouverture" class="form-control"
+                                   value="{{ v.date_ouverture|date:'Y-m-d\TH:i' }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label x-small fw-bold">Fermeture</label>
+                            <input type="datetime-local" name="date_fermeture" class="form-control"
+                                   value="{{ v.date_fermeture|date:'Y-m-d\TH:i' }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill shadow">
+                        ENREGISTRER LES MODIFICATIONS
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="reouvrirVague{{ v.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4 text-center">
+            <div class="modal-body p-4">
+                <div class="avatar-md bg-info-subtle text-info rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-unlock fa-2x"></i>
+                </div>
+                <h5 class="fw-bold">Réouvrir la session ?</h5>
+                <p class="text-muted small">Veuillez définir une nouvelle date de clôture pour réactiver les inscriptions.</p>
+
+                <form action="{% url 'administration:reouvrir_vague' v.id %}" method="POST">
+                    {% csrf_token %}
+                    {% if is_de %}<input type="hidden" name="dept_id" value="{{ chef_dept.id }}">{% endif %}
+
+                    <div class="mb-3 text-start">
+                        <label class="form-label x-small fw-bold">Nouvelle date de fermeture</label>
+                        <input type="datetime-local" name="nouvelle_date_fermeture" class="form-control py-2" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-info w-100 fw-bold text-white rounded-pill mb-2">RÉOUVRIR</button>
+                    <button type="button" class="btn btn-light w-100 rounded-pill" data-bs-dismiss="modal">Annuler</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,118 @@
+{% load static %} <div class="card border-0 shadow-sm rounded-4 p-3 mb-4">
+<div class="card border-0 shadow-sm rounded-4 p-3 mb-4">
+    <form method="GET" class="row g-2 align-items-center">
+        {% if is_de %}
+            <input type="hidden" name="dept_id" value="{{ chef_dept.id }}">
+        {% endif %}
+
+        <div class="col-md-7">
+            <div class="input-group">
+                <span class="input-group-text border-0 bg-light text-muted"><i class="fas fa-search"></i></span>
+                <input type="text" name="search_vague" class="form-control border-0 bg-light"
+                       placeholder="Rechercher une vague..." value="{{ request.GET.search_vague|default:'' }}">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select name="search_annee_crea" class="form-select border-0 bg-light">
+                <option value="">Toutes les années</option>
+                {% for date in annees_existantes %}
+                    <option value="{{ date.year }}" {% if request.GET.search_annee_crea == date.year|stringformat:"i" %}selected{% endif %}>
+                        Sessions de {{ date.year }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-dark flex-grow-1 rounded-pill fw-bold">Filtrer</button>
+            <a href="?{% if is_de %}dept_id={{ chef_dept.id }}{% endif %}" class="btn btn-light border rounded-circle">
+                <i class="fas fa-sync-alt"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+{% if vagues %}
+<div class="row g-3">
+    {% for v in vagues %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100 transition-hover">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <span class="badge {% if v.est_cloturee %}bg-secondary-subtle text-secondary{% else %}bg-success-subtle text-success{% endif %} rounded-pill px-3 py-2">
+                        <i class="fas {% if v.est_cloturee %}fa-archive{% else %}fa-check-circle{% endif %} me-1"></i>
+                        {% if v.est_cloturee %}Clôturée{% else %}Active{% endif %}
+                    </span>
+                    <div class="dropdown">
+                        <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow rounded-3">
+                            <li>
+                                <a class="dropdown-item small" href="#" data-bs-toggle="modal" data-bs-target="#editVague{{ v.id }}">
+                                    <i class="fas fa-edit me-2 text-primary"></i>Modifier
+                                </a>
+                            </li>
+                            {% if not v.est_cloturee %}
+                            <li>
+                                <form action="{% url 'administration:cloturer_vague' v.id %}" method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    {% if is_de %}<input type="hidden" name="dept_id" value="{{ chef_dept.id }}">{% endif %}
+                                    <button type="submit" class="dropdown-item small text-danger">
+                                        <i class="fas fa-lock me-2"></i>Clôturer
+                                    </button>
+                                </form>
+                            </li>
+                            {% else %}
+                            <li>
+                                <a class="dropdown-item small text-info" href="#" data-bs-toggle="modal" data-bs-target="#reouvrirVague{{ v.id }}">
+                                    <i class="fas fa-unlock me-2"></i>Réouvrir
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+
+                <h5 class="fw-bold mb-1">{{ v.libelle }}</h5>
+                <p class="text-muted small mb-3">
+                    <i class="far fa-calendar-alt me-1"></i> {{ v.date_ouverture|date:"d M" }} - {{ v.date_fermeture|date:"d M Y" }}
+                </p>
+
+                <div class="mb-4">
+                    <label class="x-small fw-bold text-uppercase text-muted d-block mb-2">Promotions :</label>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for promo in v.annees_concernees.all %}
+                            <span class="badge border text-dark fw-normal rounded-pill bg-light">#{{ promo.libelle }}</span>
+                        {% empty %}
+                            <span class="text-muted small italic">Aucune promotion</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <a href="{% url 'administration:chef_detail_vague' v.id %}{% if is_de %}?dept_id={{ chef_dept.id }}{% endif %}"
+                   class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm">
+                    Gérer les inscriptions <i class="fas fa-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% include 'administration/chef/includes/modals_vague_actions.html' with v=v %}
+
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <img src="{% static 'img/empty_vague.svg' %}" alt="" style="width: 150px;" class="opacity-25 mb-3">
+    <p class="text-muted fw-medium">Aucune session de soutenance trouvée.</p>
+</div>
+{% endif %}
+
+<style>
+    .transition-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.1) !important;
+        transition: all 0.3s ease;
+    }
+    .x-small { font-size: 0.65rem; }
+</style>

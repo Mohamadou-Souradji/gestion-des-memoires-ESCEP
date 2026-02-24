@@ -707,49 +707,69 @@ def get_etudiants_par_classe_et_annee(request, classe_id):
     # On récupère l'année en cours ou on laisse le filtrage global
     etudiants = Etudiant.objects.filter(classe_id=classe_id).values('matricule', 'nom', 'prenom')
     return JsonResponse(list(etudiants), safe=False)
+
+
 @login_required
 def enregistrer_theme_etudiant(request):
     if request.method == 'POST':
-        # On récupère le dept_id pour la redirection (utile pour le DE)
-        dept_id = request.POST.get('dept_id') 
-        
-        dossier_id = request.POST.get('dossier_id')
+        # 1. Récupération des données du formulaire
+        dept_id = request.POST.get('dept_id')  # Utilisé par le DE pour rester sur le même département
+        dossier_id = request.POST.get('dossier_id')  # Présent si c'est une modification
         matricule = request.POST.get('etudiant_matricule')
         theme = request.POST.get('theme')
         encadreur = request.POST.get('encadreur')
         lieu = request.POST.get('lieu_stage')
 
+        # 2. Récupération de l'étudiant
         etudiant = get_object_or_404(Etudiant, matricule=matricule)
+
+        # 3. Recherche d'un dossier existant pour cet étudiant
         dossier = DossierMemoire.objects.filter(etudiant=etudiant).first()
 
         if dossier:
+            # Si le dossier existe, on autorise la modification si :
+            # - Le thème n'était pas encore validé
+            # - OU si on vient explicitement d'un formulaire de modification (dossier_id présent)
             if not dossier.is_theme_valide or dossier_id:
                 dossier.theme = theme
                 dossier.encadreur = encadreur
                 dossier.lieu_stage = lieu
-                dossier.is_theme_valide = True 
+                dossier.is_theme_valide = True
                 dossier.save()
-                messages.success(request, f"Le thème de {etudiant.nom} a été validé.")
+                messages.success(request, f"Le thème de {etudiant.nom} {etudiant.prenom} a été mis à jour et validé.")
             else:
+                # Sécurité pour éviter d'écraser un thème déjà validé par erreur
                 messages.error(request, f"Action refusée : {etudiant.nom} possède déjà un thème validé.")
         else:
+            # Si aucun dossier n'existe, on le crée de zéro
             DossierMemoire.objects.create(
-                etudiant=etudiant, theme=theme, encadreur=encadreur,
-                lieu_stage=lieu, is_theme_valide=True
+                etudiant=etudiant,
+                theme=theme,
+                encadreur=encadreur,
+                lieu_stage=lieu,
+                is_theme_valide=True
             )
-            messages.success(request, f"Dossier créé et thème validé pour {etudiant.nom}.")
+            messages.success(request, f"Dossier créé et thème enregistré pour {etudiant.nom} {etudiant.prenom}.")
 
         # --- REDIRECTION INTELLIGENTE ---
+        # Si c'est le DE, on le renvoie sur la page de supervision du département spécifique
         if request.user.role == 'DE' and dept_id:
             return redirect(f"{reverse('administration:liste_themes_etudiants')}?dept_id={dept_id}")
-            
+
+    # Redirection par défaut (pour les Chefs de Département ou si pas de dept_id)
     return redirect('administration:liste_themes_etudiants')
+
+
 @login_required
 def get_etudiants_par_classe_et_annee(request, classe_id, annee_id):
-    # Cette fonction renvoie les étudiants filtrés par les deux critères
-    etudiants = Etudiant.objects.filter(classe_id=classe_id, annee_id=annee_id)
-    data = list(etudiants.values('matricule', 'nom', 'prenom'))
-    return JsonResponse(data, safe=False)
+    # On récupère les étudiants qui appartiennent à cette classe ET à cette année
+    etudiants = Etudiant.objects.filter(
+        classe_id=classe_id,
+        annee_id=annee_id
+    ).values('matricule', 'nom', 'prenom')
+
+    # Transformation en liste pour le JsonResponse
+    return JsonResponse(list(etudiants), safe=False)
 @login_required
 def get_classes(request, filiere_id):
     classes = Classe.objects.filter(filiere_id=filiere_id).values('id', 'nom')
@@ -780,41 +800,43 @@ from django.db.models import Q
 
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
+
+
 @login_required
 def chef_liste_vagues(request):
     maintenant = timezone.now()
-    is_de = (request.user.role == 'DE') # Détection du rôle Superadmin
+    is_de = (request.user.role == 'DE')
 
     # --- LOGIQUE DE DÉTERMINATION DU DÉPARTEMENT ---
     if is_de:
-        # Le DE choisit le département via un paramètre dans l'URL
+        # Le DE choisit le département via l'URL (?dept_id=...)
         dept_id = request.GET.get('dept_id') or request.POST.get('dept_id')
         if not dept_id:
-            # Si aucun département n'est sélectionné, retour au tableau de bord de choix
             return redirect('administration:accueil_chef')
         chef_dept = get_object_or_404(Departement, id=dept_id)
     else:
-        # Le Chef est limité à son propre département
+        # Le Chef est bloqué sur son département à lui
         chef_dept = request.user.departement
 
-    # 1. Filtrage des vagues du département sélectionné
+    # --- RÉCUPÉRATION DES DONNÉES ---
     vagues_query = Vague.objects.filter(departement=chef_dept)
-    
+
+    # Filtres de recherche
     search_libelle = request.GET.get('search_vague')
     search_annee = request.GET.get('search_annee_crea')
-    
     if search_libelle:
         vagues_query = vagues_query.filter(libelle__icontains=search_libelle)
     if search_annee:
         vagues_query = vagues_query.filter(date_creation__year=search_annee)
 
     vagues = vagues_query.prefetch_related('annees_concernees').order_by('-date_creation')
-    
+
+    # Données pour les modales et l'affichage
     toutes_les_annees = AnneeScolaire.objects.all().order_by('-libelle')
     annees_existantes = Vague.objects.filter(departement=chef_dept).dates('date_creation', 'year', order='DESC')
     vague_en_cours = Vague.objects.filter(departement=chef_dept, est_cloturee=False).first()
 
-    # 2. Gestion de la Création (POST)
+    # --- GESTION DE LA CRÉATION (POST) ---
     if request.method == 'POST':
         if vague_en_cours:
             messages.error(request, "Impossible : une session est déjà active pour ce département.")
@@ -823,25 +845,23 @@ def chef_liste_vagues(request):
             ouverture_str = request.POST.get('date_ouverture')
             fermeture_str = request.POST.get('date_fermeture')
 
-            ouverture = parse_datetime(ouverture_str)
-            fermeture = parse_datetime(fermeture_str)
-
-            if ouverture and fermeture and fermeture <= ouverture:
+            # Validation simple des dates
+            if ouverture_str and fermeture_str and fermeture_str <= ouverture_str:
                 messages.error(request, "Erreur : La date de fermeture doit être après l'ouverture.")
             else:
                 v = Vague.objects.create(
-                    libelle=libelle, 
-                    departement=chef_dept, # Département dynamique (Chef ou sélection DE)
-                    date_ouverture=ouverture_str, 
-                    date_fermeture=fermeture_str, 
+                    libelle=libelle,
+                    departement=chef_dept,
+                    date_ouverture=ouverture_str,
+                    date_fermeture=fermeture_str,
                     est_cloturee=False
                 )
                 v.annees_concernees.set(request.POST.getlist('annees_concernees'))
-                messages.success(request, f"Session '{libelle}' créée pour le département {chef_dept.nom}.")
-                
-                # Redirection vers la même page avec le paramètre dept_id pour le DE
+                messages.success(request, f"Session créée avec succès pour {chef_dept.nom}.")
+
+                # Redirection intelligente : on garde le dept_id si on est DE
                 if is_de:
-                    return redirect(f"{request.path}?dept_id={chef_dept.id}")
+                    return redirect(f"{reverse('administration:chef_liste_vagues')}?dept_id={chef_dept.id}")
                 return redirect('administration:chef_liste_vagues')
 
     context = {
@@ -853,88 +873,93 @@ def chef_liste_vagues(request):
         'vague_en_cours': vague_en_cours
     }
 
-    # Routage vers le template Superadmin (DE) ou Chef
     template = 'administration/supervision/vagues_supervision.html' if is_de else 'administration/chef/vagues_liste.html'
     return render(request, template, context)
 # --- FONCTIONS D'ACTIONS (Appelées par les modales) ---
-
-@login_required
-def cloturer_vague(request, pk):
-    vague = get_object_or_404(Vague, pk=pk, departement=request.user.departement)
-    vague.est_cloturee = True
-    vague.save()
-    messages.warning(request, f"Session '{vague.libelle}' archivée.")
-    return redirect('administration:chef_liste_vagues')
-
 @login_required
 def modifier_vague(request, pk):
-    vague = get_object_or_404(Vague, pk=pk, departement=request.user.departement)
-    
+    # 1. On récupère la vague sans filtrer immédiatement par request.user.departement
+    vague = get_object_or_404(Vague, pk=pk)
+    is_de = (request.user.role == 'DE')
+
+    # 2. Sécurité : Vérifier si l'utilisateur a le droit (Soit DE, soit le Chef du bon département)
+    if not is_de and request.user.departement != vague.departement:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('administration:accueil_chef')
+
     if request.method == 'POST':
         vague.libelle = request.POST.get('libelle')
         vague.date_ouverture = request.POST.get('date_ouverture')
         vague.date_fermeture = request.POST.get('date_fermeture')
         vague.save()
 
-        # Mise à jour des promotions (ManyToMany)
-        # On récupère la liste des IDs cochés
+        # Mise à jour ManyToMany
         ids_selectionnes = request.POST.getlist('annees_concernees')
-        vague.annees_concernees.set(ids_selectionnes) 
-        
-        messages.success(request, "Paramètres de la session mis à jour.")
+        vague.annees_concernees.set(ids_selectionnes)
+
+        messages.success(request, f"Session '{vague.libelle}' mise à jour.")
+
+    # 3. Redirection intelligente selon le rôle
+    if is_de:
+        return redirect(f"{reverse('administration:chef_liste_vagues')}?dept_id={vague.departement.id}")
     return redirect('administration:chef_liste_vagues')
-from datetime import datetime  # <--- C'est l'import qui manquait
-from django.utils import timezone
-from django.utils.dateparse import parse_datetime
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+
+
+@login_required
+def cloturer_vague(request, pk):
+    vague = get_object_or_404(Vague, pk=pk)
+    is_de = (request.user.role == 'DE')
+
+    if not is_de and request.user.departement != vague.departement:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('administration:accueil_chef')
+
+    vague.est_cloturee = True
+    vague.save()
+    messages.warning(request, f"Session '{vague.libelle}' archivée.")
+
+    if is_de:
+        return redirect(f"{reverse('administration:chef_liste_vagues')}?dept_id={vague.departement.id}")
+    return redirect('administration:chef_liste_vagues')
+
+
 @login_required
 def reouvrir_vague(request, pk):
-    vague = get_object_or_404(Vague, pk=pk, departement=request.user.departement)
-    
+    vague = get_object_or_404(Vague, pk=pk)
+    is_de = (request.user.role == 'DE')
+    dept_cible = vague.departement  # On utilise le département lié à la vague
+
+    if not is_de and request.user.departement != dept_cible:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('administration:accueil_chef')
+
     if request.method == 'POST':
-        # 1. Sécurité : pas d'autre vague active
+        # Vérifier si une AUTRE vague est déjà active dans CE département
         vague_active = Vague.objects.filter(
-            departement=request.user.departement, 
+            departement=dept_cible,
             est_cloturee=False
         ).exclude(pk=vague.pk).exists()
 
         if vague_active:
-            messages.error(request, "Action refusée : Une autre session est déjà active.")
-            return redirect('administration:chef_liste_vagues')
-
-        # 2. Récupération de la date depuis le formulaire
-        nouvelle_date_str = request.POST.get('nouvelle_date_fermeture')
-        
-        if nouvelle_date_str:
-            # Conversion de la chaîne en objet datetime
-            nouvelle_date_naive = parse_datetime(nouvelle_date_str)
-            
-            if nouvelle_date_naive:
-                # On rend la date "aware" (avec fuseau horaire) pour la comparer à la BDD
-                nouvelle_date = timezone.make_aware(nouvelle_date_naive)
-
-                # 3. Règle : Nouvelle fermeture > Ancienne fermeture
-                if nouvelle_date <= vague.date_fermeture:
-                    # Ici, j'utilise .strftime pour formater proprement l'affichage
-                    ancienne_date_formatee = vague.date_fermeture.strftime("%d/%m/%Y à %H:%M")
-                    messages.error(
-                        request, 
-                        f"Erreur : La nouvelle date doit être après l'ancienne clôture ({ancienne_date_formatee})."
-                    )
-                else:
-                    vague.date_fermeture = nouvelle_date
-                    vague.est_cloturee = False
-                    vague.save()
-                    messages.success(request, f"La session '{vague.libelle}' est de nouveau ouverte.")
-            else:
-                messages.error(request, "Format de date invalide.")
+            messages.error(request, "Action refusée : Une autre session est déjà active pour ce département.")
         else:
-            messages.error(request, "Veuillez choisir une nouvelle date de fermeture.")
-            
-    return redirect('administration:chef_liste_vagues')
+            nouvelle_date_str = request.POST.get('nouvelle_date_fermeture')
+            if nouvelle_date_str:
+                nouvelle_date_naive = parse_datetime(nouvelle_date_str)
+                if nouvelle_date_naive:
+                    nouvelle_date = timezone.make_aware(nouvelle_date_naive)
 
+                    if nouvelle_date <= vague.date_fermeture:
+                        messages.error(request, "La nouvelle date doit être après l'ancienne clôture.")
+                    else:
+                        vague.date_fermeture = nouvelle_date
+                        vague.est_cloturee = False
+                        vague.save()
+                        messages.success(request, f"La session '{vague.libelle}' est de nouveau ouverte.")
+
+    if is_de:
+        return redirect(f"{reverse('administration:chef_liste_vagues')}?dept_id={dept_cible.id}")
+    return redirect('administration:chef_liste_vagues')
 from django.db.models import Q
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
@@ -945,45 +970,64 @@ from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+
 
 @login_required
 def chef_detail_vague(request, pk):
-    vague = get_object_or_404(Vague, pk=pk, departement=request.user.departement)
-    chef_dept = request.user.departement
+    """
+    Détail d'une session : affiche les dossiers inscrits et permet l'inscription
+    de nouveaux dossiers éligibles (pré-dépôt validé et promotion correspondante).
+    """
+    # 1. Récupération de la vague (sans filtre département pour permettre l'accès au DE)
+    vague = get_object_or_404(Vague, pk=pk)
+    is_de = (request.user.role == 'DE')
     maintenant = timezone.now()
 
-    # --- BASE DES DOSSIERS ÉLIGIBLES ---
-    # 1. Pré-dépôt validé + Même département
+    # 2. LOGIQUE DE DÉTERMINATION DU DÉPARTEMENT & SÉCURITÉ
+    if is_de:
+        # Le DE "emprunte" le département de la vague qu'il consulte
+        chef_dept = vague.departement
+    else:
+        # Le Chef est strictement limité à son département
+        if vague.departement != request.user.departement:
+            messages.error(request, "Accès non autorisé à ce département.")
+            return redirect('administration:accueil_chef')
+        chef_dept = request.user.departement
+
+    # 3. BASE DES DOSSIERS ÉLIGIBLES
+    # Doivent avoir validé le pré-dépôt et appartenir au département
     dossiers_base = DossierMemoire.objects.filter(
         etudiant__classe__filiere__departement=chef_dept,
         is_pre_depot_fait=True
     )
 
-    # 2. Filtrage par les promotions (Années Scolaires) autorisées par cette vague
+    # Filtrage strict par les promotions (Années Scolaires) autorisées pour cette vague
     annees_valides_ids = vague.annees_concernees.values_list('id', flat=True)
     dossiers_base = dossiers_base.filter(etudiant__annee_id__in=annees_valides_ids)
 
-    # --- LOGIQUE D'AFFICHAGE & RÉCUPÉRATION ---
+    # 4. LOGIQUE D'AFFICHAGE & ÉTAT DE LA VAGUE
+    # Une vague est modifiable si elle est dans son créneau de dates ET non clôturée manuellement
     peut_modifier = vague.date_ouverture <= maintenant <= vague.date_fermeture and not vague.est_cloturee
     peut_reouvrir = vague.date_ouverture <= maintenant <= vague.date_fermeture and vague.est_cloturee
 
     if peut_modifier:
-        # On exclut ceux déjà inscrits dans une AUTRE vague qui est encore OUVERTE
+        # On exclut les étudiants déjà inscrits dans une AUTRE vague qui est encore OUVERTE
+        # pour éviter les doublons d'inscriptions actives
         occupes_ailleurs = DossierMemoire.objects.filter(
             vague__departement=chef_dept,
             vague__est_cloturee=False,
             is_soutenu=False
         ).exclude(vague=vague).values_list('etudiant_id', flat=True)
 
-        # On affiche : Ceux de cette vague OU (Ceux non soutenus ET non occupés ailleurs)
+        # On affiche : Les dossiers déjà dans cette vague + Ceux non soutenus libres
         dossiers = dossiers_base.filter(
             Q(vague=vague) | Q(is_soutenu=False)
         ).exclude(etudiant_id__in=occupes_ailleurs)
     else:
-        # Si clos : Uniquement les inscrits de cette vague
+        # Si la session est close ou expirée : on affiche uniquement les inscrits définitifs
         dossiers = dossiers_base.filter(vague=vague)
 
-    # --- APPLICATION DES FILTRES DE RECHERCHE (Correction ici) ---
+    # 5. FILTRES DE RECHERCHE (Filière, Classe, Année)
     f_id = request.GET.get('filiere')
     c_id = request.GET.get('classe')
     a_id = request.GET.get('annee')
@@ -995,35 +1039,62 @@ def chef_detail_vague(request, pk):
     if a_id and a_id.isdigit():
         dossiers = dossiers.filter(etudiant__annee_id=a_id)
 
-    # Optimisation
-    dossiers = dossiers.select_related('etudiant', 'etudiant__classe', 'etudiant__annee', 'etudiant__classe__filiere').distinct().order_by('etudiant__nom')
+    # Optimisation des requêtes pour éviter le N+1
+    dossiers = dossiers.select_related(
+        'etudiant',
+        'etudiant__classe',
+        'etudiant__annee',
+        'etudiant__classe__filiere'
+    ).distinct().order_by('etudiant__nom')
 
+    # 6. CONTEXTE POUR LE TEMPLATE
     context = {
         'vague': vague,
         'dossiers': dossiers,
+        'chef_dept': chef_dept,
+        'is_de': is_de,
         'peut_modifier': peut_modifier,
         'peut_reouvrir': peut_reouvrir,
         'filieres': Filiere.objects.filter(departement=chef_dept),
         'classes_du_dept': Classe.objects.filter(filiere__departement=chef_dept),
+        'maintenant': maintenant,
     }
+
+    # 7. ROUTAGE DYNAMIQUE DU TEMPLATE
+    # Chaque rôle garde son environnement (Sidebar, Navbar, Styles)
+    if is_de:
+        return render(request, 'administration/supervision/vague_detail_supervision.html', context)
     return render(request, 'administration/chef/vague_detail.html', context)
+
 
 @login_required
 def chef_toggle_cloture(request, pk):
-    """Inverse l'état de clôture manuelle de la vague avec sécurité d'unicité active"""
-    vague = get_object_or_404(Vague, pk=pk, departement=request.user.departement)
-    chef_dept = request.user.departement
+    """
+    Inverse l'état de clôture manuelle de la session.
+    Adapté pour le DE (supervision multi-départements) et le Chef.
+    """
+    # 1. Récupération sans filtrer par request.user.departement pour le DE
+    vague = get_object_or_404(Vague, pk=pk)
+    is_de = (request.user.role == 'DE')
     maintenant = timezone.now()
 
-    # 1. Vérification du délai global
+    # 2. Sécurité : Si pas DE, vérification du département
+    if not is_de and vague.departement != request.user.departement:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('administration:accueil_chef')
+
+    chef_dept = vague.departement
+
+    # 3. Vérification du délai global (Optionnel : le DE pourrait avoir le droit de passer outre ?)
+    # Ici, on garde la règle académique : si la date de fermeture est passée, on ne peut plus ouvrir.
     if maintenant > vague.date_fermeture:
         messages.error(request, "Impossible : le délai de fermeture académique est dépassé.")
-        return redirect('administration:chef_detail_vague', pk=vague.id)
+        return self_redirect_vague(vague.id, chef_dept.id, is_de)
 
-    # 2. Logique de basculement (Toggle)
+    # 4. Logique de basculement (Toggle)
     if vague.est_cloturee:
         # TENTATIVE DE RÉOUVERTURE
-        # On vérifie s'il existe une AUTRE vague déjà ouverte pour ce département
+        # Vérification s'il existe une AUTRE vague déjà ouverte dans CE département
         autre_vague_ouverte = Vague.objects.filter(
             departement=chef_dept,
             est_cloturee=False
@@ -1031,32 +1102,45 @@ def chef_toggle_cloture(request, pk):
 
         if autre_vague_ouverte:
             messages.error(
-                request, 
-                "Action refusée : Vous avez déjà une autre session ouverte. "
-                "Veuillez clôturer la session active avant d'en réouvrir une autre."
+                request,
+                f"Action refusée : Une autre session est déjà active pour le département {chef_dept.nom}."
             )
-            return redirect('administration:chef_detail_vague', pk=vague.id)
-        
+            return self_redirect_vague(vague.id, chef_dept.id, is_de)
+
         vague.est_cloturee = False
         msg = "réouverte"
+        messages.success(request, f"La session a été {msg} avec succès.")
     else:
         # CLÔTURE MANUELLE
         vague.est_cloturee = True
         msg = "clôturée"
+        messages.warning(request, f"La session a été {msg} (archivée).")
 
     vague.save()
-    messages.success(request, f"La session a été {msg} avec succès.")
-    return redirect('administration:chef_detail_vague', pk=vague.id)
+    return self_redirect_vague(vague.id, chef_dept.id, is_de)
 
+
+# Utilitaire de redirection pour cohérence
+def self_redirect_vague(vague_id, dept_id, is_de):
+    url = reverse('administration:chef_detail_vague', kwargs={'pk': vague_id})
+    if is_de:
+        return redirect(f"{url}?dept_id={dept_id}")
+    return redirect(url)
 @login_required
 def chef_inscrire_vague(request, pk_dossier, pk_vague):
-    """Inscrit un étudiant à la vague"""
-    vague = get_object_or_404(Vague, pk=pk_vague, departement=request.user.departement)
+    """Inscrit un étudiant à la vague (Adapté Chef et DE)"""
+    vague = get_object_or_404(Vague, pk=pk_vague)
+    is_de = (request.user.role == 'DE')
+
+    # --- SÉCURITÉ ---
+    if not is_de and vague.departement != request.user.departement:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('administration:accueil_chef')
+
     dossier = get_object_or_404(DossierMemoire, pk=pk_dossier)
-    
     maintenant = timezone.now()
-    
-    # Vérification si la vague est encore ouverte
+
+    # Vérification si la vague est encore ouverte (Dates + État)
     if not vague.est_cloturee and vague.date_ouverture <= maintenant <= vague.date_fermeture:
         dossier.vague = vague
         dossier.save()
@@ -1064,14 +1148,28 @@ def chef_inscrire_vague(request, pk_dossier, pk_vague):
     else:
         messages.error(request, "Impossible : cette session est clôturée ou le délai est expiré.")
 
-    return redirect('administration:chef_detail_vague', pk=pk_vague)
+    # Redirection vers le détail (la vue chef_detail_vague s'occupe de choisir le bon template)
+    url = reverse('administration:chef_detail_vague', kwargs={'pk': pk_vague})
+    # Si c'est le DE, on ajoute l'ID du département dans l'URL pour garder le menu actif
+    if is_de:
+        return redirect(f"{url}?dept_id={vague.departement.id}")
+    return redirect(url)
+
 
 @login_required
 def chef_annuler_inscription(request, pk_dossier, pk_vague):
-    """Retire un étudiant de la vague"""
-    vague = get_object_or_404(Vague, pk=pk_vague, departement=request.user.departement)
+    """Retire un étudiant de la vague (Adapté Chef et DE)"""
+    vague = get_object_or_404(Vague, pk=pk_vague)
+    is_de = (request.user.role == 'DE')
+
+    # --- SÉCURITÉ ---
+    if not is_de and vague.departement != request.user.departement:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('administration:accueil_chef')
+
     dossier = get_object_or_404(DossierMemoire, pk=pk_dossier)
 
+    # On ne peut annuler que si la vague n'est pas encore clôturée manuellement
     if not vague.est_cloturee:
         dossier.vague = None
         dossier.save()
@@ -1079,7 +1177,10 @@ def chef_annuler_inscription(request, pk_dossier, pk_vague):
     else:
         messages.error(request, "Modification impossible sur une session archivée.")
 
-    return redirect('administration:chef_detail_vague', pk=pk_vague)
+    url = reverse('administration:chef_detail_vague', kwargs={'pk': pk_vague})
+    if is_de:
+        return redirect(f"{url}?dept_id={vague.departement.id}")
+    return redirect(url)
 import openpyxl
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
@@ -1088,27 +1189,36 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from django.http import HttpResponse # <--- C'est cette ligne qui manque
 
 from django.db.models import Q
+
+
 @login_required
 def exporter_rapport_complet(request):
-    type_donnees = request.GET.get('type') 
+    is_de = (request.user.role == 'DE')
+    type_donnees = request.GET.get('type')
     format_type = request.GET.get('format', 'excel')
     filiere_id = request.GET.get('filiere')
     vague_id = request.GET.get('vague')
     annee_id = request.GET.get('annee')
+    dept_id = request.GET.get('dept_id')  # Nouveau : pour le DE
 
     # --- BASE DE RECHERCHE ---
     query = DossierMemoire.objects.all()
 
+    # --- FILTRAGE PAR DÉPARTEMENT (Sécurité DE vs Chef) ---
+    if is_de:
+        if dept_id:
+            query = query.filter(etudiant__classe__filiere__departement_id=dept_id)
+    else:
+        query = query.filter(etudiant__classe__filiere__departement=request.user.departement)
+
     # --- LOGIQUE FILTRAGE ET HEADERS ---
     if type_donnees == 'themes':
         filename = "Liste_des_Themes"
-        # Structure Thèmes : Matricule (4 car.), Étudiant, Classe, Thème, Encadreur
         headers = ['MATRICULE', 'ÉTUDIANT', 'CLASSE', 'THÈME COMPLET', 'ENCADREUR']
         if annee_id:
             query = query.filter(etudiant__annee_id=annee_id)
     else:
         filename = "Planning_Soutenances"
-        # Structure Planning demandée : Date, Étudiant, Classe, Thème, Heure, Salle
         headers = ['DATE', 'ÉTUDIANT', 'CLASSE', 'THÈME COMPLET', 'HEURE', 'SALLE']
         if vague_id:
             query = query.filter(vague_id=vague_id)
@@ -1118,54 +1228,50 @@ def exporter_rapport_complet(request):
         query = query.filter(etudiant__classe__filiere_id=filiere_id)
 
     query = query.select_related('etudiant', 'etudiant__classe', 'soutenance').distinct()
-    dossiers = query.order_by('soutenance__date', 'soutenance__heure') if type_donnees == 'planning' else query.order_by('etudiant__nom')
+    dossiers = query.order_by('soutenance__date',
+                              'soutenance__heure') if type_donnees == 'planning' else query.order_by('etudiant__nom')
 
     # --- OPTION A : EXCEL ---
     if format_type == 'excel':
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.append(headers)
-        
-        # Style En-tête
-        header_font = Font(bold=True, color="FFFFFF")
+
         header_fill = PatternFill(start_color="003366", end_color="003366", fill_type="solid")
         for cell in ws[1]:
-            cell.font = header_font
+            cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = header_fill
             cell.alignment = Alignment(horizontal="center")
 
         for d in dossiers:
             if type_donnees == 'planning':
                 s = d.soutenance
-                ws.append([
-                    s.date.strftime('%d/%m/%y'), 
-                    f"{d.etudiant.nom} {d.etudiant.prenom}", 
-                    d.etudiant.classe.nom, 
-                    d.theme, 
-                    s.heure.strftime('%H:%M'), 
-                    s.salle
-                ])
+                ws.append([s.date.strftime('%d/%m/%y'), f"{d.etudiant.nom} {d.etudiant.prenom}", d.etudiant.classe.nom,
+                           d.theme, s.heure.strftime('%H:%M'), s.salle])
             else:
                 matricule_4 = str(d.etudiant.matricule)[:4] if d.etudiant.matricule else ""
-                ws.append([matricule_4, f"{d.etudiant.nom} {d.etudiant.prenom}", d.etudiant.classe.nom, d.theme, d.encadreur])
+                ws.append(
+                    [matricule_4, f"{d.etudiant.nom} {d.etudiant.prenom}", d.etudiant.classe.nom, d.theme, d.encadreur])
 
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = f'attachment; filename="{filename}.xlsx"'
         wb.save(response)
         return response
 
-    # --- OPTION B : WORD ---
+    # --- OPTION B : WORD (Format Officiel Niger) ---
     else:
         doc = Document()
-        # En-tête officiel
+        # En-tête ESCEP-NIGER
         section = doc.sections[0]
         header_table = doc.add_table(rows=1, cols=2)
         header_table.width = Inches(6.5)
-        
+
         left_p = header_table.rows[0].cells[0].paragraphs[0]
         left_p.add_run("RÉPUBLIQUE DU NIGER\n").bold = True
-        left_p.add_run("Fraternité - Travail - Progrès\n-----------\nESCEP-NIGER").bold = True
-        
+        left_p.add_run("Fraternité - Travail - Progrès\n-----------\nESCEP-NIGER\n").bold = True
+        left_p.add_run(
+            f"DEPT : {dossiers.first().etudiant.classe.filiere.departement.nom if dossiers.exists() else ''}")
+
         right_p = header_table.rows[0].cells[1].paragraphs[0]
         right_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         right_p.add_run(f"Niamey, le {timezone.now().strftime('%d/%m/%Y')}")
@@ -1173,73 +1279,80 @@ def exporter_rapport_complet(request):
         doc.add_paragraph("\n")
         titre = doc.add_heading(filename.replace('_', ' ').upper(), level=1)
         titre.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        doc.add_paragraph("\n")
 
         table = doc.add_table(rows=1, cols=len(headers))
         table.style = 'Table Grid'
-        
         for i, text in enumerate(headers):
-            cell = table.rows[0].cells[i]
-            cell.text = text
-            cell.paragraphs[0].runs[0].bold = True
+            table.rows[0].cells[i].text = text
 
         for d in dossiers:
-            row_cells = table.add_row().cells
+            row = table.add_row().cells
             if type_donnees == 'planning':
                 s = d.soutenance
-                row_cells[0].text = s.date.strftime('%d/%m/%y')
-                row_cells[1].text = f"{d.etudiant.nom} {d.etudiant.prenom}"
-                row_cells[2].text = d.etudiant.classe.nom
-                row_cells[3].text = d.theme or ""
-                row_cells[4].text = s.heure.strftime('%H:%M')
-                row_cells[5].text = s.salle or ""
+                row[0].text = s.date.strftime('%d/%m/%y')
+                row[1].text = f"{d.etudiant.nom} {d.etudiant.prenom}"
+                row[2].text = d.etudiant.classe.nom
+                row[3].text = d.theme or ""
+                row[4].text = s.heure.strftime('%H:%M')
+                row[5].text = s.salle or ""
             else:
-                matricule_4 = str(d.etudiant.matricule)[:4] if d.etudiant.matricule else ""
-                row_cells[0].text = matricule_4
-                row_cells[1].text = f"{d.etudiant.nom} {d.etudiant.prenom}"
-                row_cells[2].text = d.etudiant.classe.nom
-                row_cells[3].text = d.theme or ""
-                row_cells[4].text = d.encadreur or ""
+                row[0].text = str(d.etudiant.matricule)[:4]
+                row[1].text = f"{d.etudiant.nom} {d.etudiant.prenom}"
+                row[2].text = d.etudiant.classe.nom
+                row[3].text = d.theme or ""
+                row[4].text = d.encadreur or ""
 
-        doc.add_paragraph("\n\nLe Chef de Département")
-        
+        doc.add_paragraph(f"\n\nSigné le {timezone.now().strftime('%d/%m/%Y')}")
+        doc.add_paragraph(
+            "Le Directeur des Études" if is_de else "Le Chef de Département").alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         response['Content-Disposition'] = f'attachment; filename="{filename}.docx"'
         doc.save(response)
         return response
-    
+
+
 @login_required
 def page_rapport_chef(request):
-    dept = request.user.departement
-    
-    # Récupération des filtres depuis l'URL (GET)
+    is_de = (request.user.role == 'DE')
+
+    if is_de:
+        dept_id = request.GET.get('dept_id')
+        if not dept_id: return redirect('administration:accueil_chef')
+        dept = get_object_or_404(Departement, id=dept_id)
+    else:
+        dept = request.user.departement
+
     vague_id = request.GET.get('vague')
     filiere_id = request.GET.get('filiere')
-    
+
+    # On récupère les vagues du département, triées par date de création (la plus récente d'abord)
+    # prefetch_related est nécessaire car annees_concernees est un ManyToMany
+    vagues = Vague.objects.filter(departement=dept).prefetch_related('annees_concernees').order_by('-date_creation')
+
     dossiers_preview = None
-    
-    # On ne génère l'aperçu que si une vague est sélectionnée
     if vague_id:
         query = DossierMemoire.objects.filter(
             vague_id=vague_id,
             etudiant__classe__filiere__departement=dept,
-            soutenance__status='PROGRAMME' # Uniquement ceux qui ont un planning fixé
+            soutenance__status='PROGRAMME'
         ).select_related('etudiant', 'etudiant__classe', 'soutenance')
-        
+
         if filiere_id:
             query = query.filter(etudiant__classe__filiere_id=filiere_id)
-            
         dossiers_preview = query.order_by('soutenance__date', 'soutenance__heure')
 
     context = {
+        'dept': dept,
         'filieres': Filiere.objects.filter(departement=dept),
-        'vagues': Vague.objects.filter(departement=dept).order_by('-date_creation'),
+        'vagues': vagues,
         'dossiers': dossiers_preview,
         'vague_selectionnee': vague_id,
         'filiere_selectionnee': filiere_id,
+        'is_de': is_de,
+        'toutes_les_annees': AnneeScolaire.objects.all().order_by('-libelle'),
     }
-    
-    return render(request, 'administration/chef/rapports.html', context)
+    return render(request, 'administration/supervision/rapports_supervision.html', context)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -1276,13 +1389,21 @@ def liste_jurys_chef(request):
     template = 'administration/supervision/jurys_supervision.html' if is_de else 'administration/chef/liste_jurys.html'
     return render(request, template, context)
 
+
 @login_required
 def enregistrer_jury_chef(request):
-    """Gère la création et la modification avec fusion intelligente des spécialités."""
+    """Gère la création et la modification avec support DE."""
     if request.method == 'POST':
-        chef_dept = request.user.departement
+        is_de = (request.user.role == 'DE')
         jury_id = request.POST.get('jury_id')
-        
+
+        # Récupération du département cible (via POST pour le DE, via User pour le Chef)
+        if is_de:
+            dept_id = request.POST.get('dept_id')
+            chef_dept = get_object_or_404(Departement, id=dept_id)
+        else:
+            chef_dept = request.user.departement
+
         # Nettoyage des données
         nom = request.POST.get('nom').upper().strip()
         prenom = request.POST.get('prenom').strip()
@@ -1292,6 +1413,7 @@ def enregistrer_jury_chef(request):
 
         # --- CAS MODIFICATION ---
         if jury_id:
+            # Sécurité : on vérifie que le jury appartient bien au département cible
             jury = get_object_or_404(Jury, id=jury_id, departement=chef_dept)
             jury.nom = nom
             jury.prenom = prenom
@@ -1300,10 +1422,9 @@ def enregistrer_jury_chef(request):
             jury.telephone = telephone
             jury.save()
             messages.success(request, f"Le profil de {prenom} {nom} a été mis à jour.")
-        
-        # --- CAS NOUVEL AJOUT (Avec vérification de doublon) ---
+
+        # --- CAS NOUVEL AJOUT ---
         else:
-            # On cherche si cette personne existe déjà dans CE département
             jury_existant = Jury.objects.filter(
                 departement=chef_dept,
                 nom__iexact=nom,
@@ -1311,16 +1432,14 @@ def enregistrer_jury_chef(request):
             ).first()
 
             if jury_existant:
-                # Règle de fusion : si la spécialité est nouvelle, on l'ajoute à la liste
                 specs_actuelles = [s.strip().lower() for s in jury_existant.specialite.split(',')]
                 if nouvelle_spec.lower() not in specs_actuelles:
                     jury_existant.specialite += f", {nouvelle_spec}"
                     jury_existant.save()
-                    messages.info(request, f"Spécialité ajoutée au profil existant de {prenom} {nom}.")
+                    messages.info(request, f"Spécialité ajoutée au profil de {prenom} {nom}.")
                 else:
-                    messages.warning(request, f"{prenom} {nom} est déjà enregistré avec cette spécialité.")
+                    messages.warning(request, f"{prenom} {nom} existe déjà avec cette spécialité.")
             else:
-                # Création totale
                 Jury.objects.create(
                     departement=chef_dept,
                     nom=nom,
@@ -1329,18 +1448,32 @@ def enregistrer_jury_chef(request):
                     statut=statut,
                     telephone=telephone
                 )
-                messages.success(request, "Nouveau membre du jury ajouté avec succès.")
-            
+                messages.success(request, "Nouveau membre du jury ajouté.")
+
+        # Redirection intelligente
+        url = reverse('administration:liste_jurys_chef')
+        return redirect(f"{url}?dept_id={chef_dept.id}" if is_de else url)
+
     return redirect('administration:liste_jurys_chef')
 
 @login_required
 def supprimer_jury_chef(request, pk):
-    """Supprime un jury en s'assurant qu'il appartient bien au département du chef."""
-    jury = get_object_or_404(Jury, pk=pk, departement=request.user.departement)
+    """Supprime un jury avec sécurité par rôle."""
+    jury = get_object_or_404(Jury, pk=pk)
+    is_de = (request.user.role == 'DE')
+    dept_id = jury.departement.id
+
+    # Sécurité : Le Chef ne peut supprimer que chez lui
+    if not is_de and jury.departement != request.user.departement:
+        messages.error(request, "Action non autorisée.")
+        return redirect('administration:accueil_chef')
+
     nom_complet = f"{jury.prenom} {jury.nom}"
     jury.delete()
-    messages.success(request, f"Le membre {nom_complet} a été supprimé de vos listes.")
-    return redirect('administration:liste_jurys_chef')
+    messages.success(request, f"Le membre {nom_complet} a été supprimé.")
+
+    url = reverse('administration:liste_jurys_chef')
+    return redirect(f"{url}?dept_id={dept_id}" if is_de else url)
 
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -1413,25 +1546,24 @@ def planning_vague_detail(request, pk):
     return render(request, template, context)
 from django.urls import reverse
 
+
 @login_required
 def proposer_soutenance(request):
     if request.method == "POST":
         d_id = request.POST.get('dossier_id')
         dossier = get_object_or_404(DossierMemoire, id=d_id)
-        
-        # Récupération des infos pour la redirection intelligente
+
         vague_id = dossier.vague.id
-        # On remonte au département via l'étudiant
         dept_id = dossier.etudiant.classe.filiere.departement.id
         is_de = (request.user.role == 'DE')
 
         # --- SÉCURITÉ ---
-        if dossier.is_soutenu:
-            messages.error(request, "Impossible de modifier le jury : l'étudiant a déjà soutenu.")
-            return self_redirect_with_dept(vague_id, dept_id, is_de)
+        if not is_de and dossier.etudiant.classe.filiere.departement != request.user.departement:
+            messages.error(request, "Accès non autorisé.")
+            return redirect('administration:accueil_chef')
 
-        if dossier.vague.est_cloturee:
-            messages.error(request, "Modification impossible : la session est clôturée.")
+        if dossier.is_soutenu or dossier.vague.est_cloturee:
+            messages.error(request, "Modification impossible (Session close ou déjà soutenu).")
             return self_redirect_with_dept(vague_id, dept_id, is_de)
 
         # --- TRAITEMENT DU JURY ---
@@ -1441,19 +1573,23 @@ def proposer_soutenance(request):
 
         membres = [m for m in [pres, rapp, exam] if m]
         if len(set(membres)) < 2:
-            messages.error(request, "Sélectionnez au moins deux membres de jury différents.")
+            messages.error(request, "Sélectionnez au moins deux membres différents.")
             return self_redirect_with_dept(vague_id, dept_id, is_de)
 
         soutenance, _ = Soutenance.objects.get_or_create(dossier=dossier)
         soutenance.president_id = pres if pres else None
         soutenance.rapporteur_id = rapp if rapp else None
         soutenance.examinateur_id = exam if exam else None
-        soutenance.status = 'PROPOSE'
+
+        # LOGIQUE DE STATUT : Le DE valide directement
+        if is_de:
+            soutenance.status = 'VALIDE'
+            messages.success(request, f"Jury validé directement par la Direction pour {dossier.etudiant.nom}.")
+        else:
+            soutenance.status = 'PROPOSE'
+            messages.success(request, f"Proposition de jury envoyée pour {dossier.etudiant.nom}.")
+
         soutenance.save()
-        
-        messages.success(request, f"Jury proposé avec succès pour {dossier.etudiant.nom}.")
-        
-        # Redirection finale
         return self_redirect_with_dept(vague_id, dept_id, is_de)
 
     return redirect('administration:accueil_chef')
@@ -1464,29 +1600,25 @@ def self_redirect_with_dept(vague_id, dept_id, is_de):
     if is_de:
         return redirect(f"{url}?dept_id={dept_id}")
     return redirect(url)
+
+
 @login_required
 def enregistrer_planning(request):
     if request.method == "POST":
         s_id = request.POST.get('soutenance_id')
         soutenance = get_object_or_404(Soutenance, id=s_id)
-        
-        # Variables pour la redirection intelligente
+
         vague_id = soutenance.dossier.vague.id
         dept_id = soutenance.dossier.etudiant.classe.filiere.departement.id
         is_de = (request.user.role == 'DE')
 
-        # SÉCURITÉ : Bloquer si déjà soutenu
-        if soutenance.dossier.is_soutenu:
-            messages.error(request, "Le planning ne peut plus être modifié (Étudiant marqué comme soutenu).")
-            return self_redirect_with_dept(vague_id, dept_id, is_de)
-
-        # SÉCURITÉ : Statut requis
+        # SÉCURITÉ : Statut requis (Le DE peut programmer même si c'est seulement 'VALIDE')
         autorise = ['VALIDE', 'PROGRAMME']
-        if soutenance.status not in autorise:
-            messages.error(request, "Le jury doit être validé par le DE avant programmation.")
+        if not is_de and soutenance.status not in autorise:
+            messages.error(request, "Le jury doit être validé avant la programmation.")
             return self_redirect_with_dept(vague_id, dept_id, is_de)
 
-        # Récupération des données du planning
+        # Récupération des données
         date_val = request.POST.get('date')
         heure_val = request.POST.get('heure')
         salle_val = request.POST.get('salle')
@@ -1495,17 +1627,13 @@ def enregistrer_planning(request):
             messages.error(request, "Tous les champs sont obligatoires.")
             return self_redirect_with_dept(vague_id, dept_id, is_de)
 
-        # Mise à jour
-        soutenance.date = date_val
-        soutenance.heure = heure_val
-        soutenance.salle = salle_val
-        
-        if soutenance.status == 'VALIDE':
-            soutenance.status = 'PROGRAMME'
-        
+        soutenance.date, soutenance.heure, soutenance.salle = date_val, heure_val, salle_val
+
+        # Le passage en PROGRAMME est automatique si les infos sont remplies
+        soutenance.status = 'PROGRAMME'
         soutenance.save()
-        messages.success(request, f"Planning mis à jour pour {soutenance.dossier.etudiant.nom}.")
-        
+
+        messages.success(request, f"Planning confirmé pour {soutenance.dossier.etudiant.nom}.")
         return self_redirect_with_dept(vague_id, dept_id, is_de)
 
     return redirect('administration:accueil_chef')
@@ -1552,68 +1680,37 @@ def marquer_soutenu_manuel(request, pk_dossier):
         dossier.save()
         
     return redirect(request.META.get('HTTP_REFERER'))
-@login_required
-def proposer_soutenance(request):
-    if request.method == "POST":
-        d_id = request.POST.get('dossier_id')
-        dossier = get_object_or_404(DossierMemoire, id=d_id)
-        
-        # RÈGLE 1 : Si déjà soutenu, on ne touche plus à rien
-        if dossier.is_soutenu:
-            messages.error(request, "Impossible : l'étudiant a déjà soutenu.")
-            return redirect('administration:planning_vague_detail', pk=dossier.vague.id)
 
-        # RÈGLE 2 : Si la vague est close par le chef
-        if dossier.vague.est_cloturee:
-            messages.error(request, "Modification impossible : la session est clôturée.")
-            return redirect('administration:planning_vague_detail', pk=dossier.vague.id)
-
-        pres = request.POST.get('president')
-        rapp = request.POST.get('rapporteur')
-        exam = request.POST.get('examinateur')
-
-        # Validation du jury (minimum 2 différents)
-        membres = [m for m in [pres, rapp, exam] if m]
-        if len(set(membres)) < 2:
-            messages.error(request, "Sélectionnez au moins deux membres de jury différents.")
-            return redirect('administration:planning_vague_detail', pk=dossier.vague.id)
-
-        # RÉÉCRITURE / MODIFICATION :
-        # On récupère ou on crée la soutenance
-        soutenance, created = Soutenance.objects.get_or_create(dossier=dossier)
-        
-        soutenance.president_id = pres
-        soutenance.rapporteur_id = rapp
-        soutenance.examinateur_id = exam if exam else None
-        
-        # RÈGLE 3 : Toute modification repasse le statut à 'PROPOSE' 
-        # Cela force le DE à re-valider le nouveau jury.
-        soutenance.status = 'PROPOSE'
-        soutenance.motif_rejet = "" # On efface un éventuel ancien rejet
-        
-        # On réinitialise le planning si le jury change (optionnel, selon votre besoin)
-        # soutenance.date = None 
-        # soutenance.heure = None
-        
-        soutenance.save()
-        
-        messages.success(request, f"Jury mis à jour et renvoyé pour validation pour {dossier.etudiant.nom}.")
-    return redirect('administration:planning_vague_detail', pk=dossier.vague.id)
 
 @login_required
 def supprimer_proposition_soutenance(request, pk_soutenance):
-    """Permet au chef de supprimer une proposition tant que l'étudiant n'a pas soutenu"""
-    soutenance = get_object_or_404(Soutenance, id=pk_soutenance, dossier__etudiant__classe__filiere__departement=request.user.departement)
+    """Adapté pour que le DE puisse aussi supprimer dans n'importe quel département"""
+    soutenance = get_object_or_404(Soutenance, id=pk_soutenance)
+    is_de = (request.user.role == 'DE')
+    dept = soutenance.dossier.etudiant.classe.filiere.departement
+
+    # Sécurité
+    if not is_de and dept != request.user.departement:
+        messages.error(request, "Droit insuffisant.")
+        return redirect('administration:accueil_chef')
+
     vague_id = soutenance.dossier.vague.id
 
     if soutenance.dossier.is_soutenu:
-        messages.error(request, "Impossible de supprimer : l'étudiant a déjà soutenu.")
+        messages.error(request, "Impossible : l'étudiant a déjà soutenu.")
     else:
         soutenance.delete()
-        messages.success(request, "La proposition et le planning ont été supprimés.")
-        
-    return redirect('administration:planning_vague_detail', pk=vague_id)
+        messages.success(request, "Programmation supprimée.")
 
+    return self_redirect_with_dept(vague_id, dept.id, is_de)
+
+
+# Utilitaire de redirection (à placer dans votre views.py)
+def self_redirect_with_dept(vague_id, dept_id, is_de):
+    url = reverse('administration:planning_vague_detail', kwargs={'pk': vague_id})
+    if is_de:
+        return redirect(f"{url}?dept_id={dept_id}")
+    return redirect(url)
 # --- ESPACE DIRECTION ---
 @login_required
 def validation_jury_liste(request):

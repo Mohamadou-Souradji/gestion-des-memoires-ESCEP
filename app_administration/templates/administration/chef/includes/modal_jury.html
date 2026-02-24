@@ -1,0 +1,89 @@
+<div class="modal fade" id="modalJury" tabindex="-1" aria-labelledby="modalJuryLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="{% url 'administration:enregistrer_jury_chef' %}" method="POST" id="formJury">
+                {% csrf_token %}
+
+                {% if is_de %}
+                    <input type="hidden" name="dept_id" value="{{ chef_dept.id }}">
+                {% endif %}
+
+                <input type="hidden" name="jury_id" id="edit_jury_id" value="">
+
+                <div class="modal-header border-0 bg-light py-3">
+                    <h5 class="modal-title fw-bold text-dark" id="modalJuryLabel">
+                        <i class="fas fa-user-plus me-2 text-primary"></i>Nouveau Membre du Jury
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Nom</label>
+                            <input type="text" name="nom" id="id_nom" class="form-control border-0 bg-light py-2" placeholder="Ex: ABDOU" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Prénom</label>
+                            <input type="text" name="prenom" id="id_prenom" class="form-control border-0 bg-light py-2" placeholder="Ex: Moussa" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Spécialité(s)</label>
+                            <input type="text" name="specialite" id="id_specialite" class="form-control border-0 bg-light py-2" placeholder="Ex: Réseaux, Sécurité, IA" required>
+                            <div class="form-text x-small">Séparez les spécialités par des virgules.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Statut</label>
+                            <select name="statut" id="id_statut" class="form-select border-0 bg-light py-2" required>
+                                <option value="INTERNE">Permanent</option>
+                                <option value="EXTERNE">Vacataire</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Téléphone</label>
+                            <input type="text" name="telephone" id="id_telephone" class="form-control border-0 bg-light py-2" placeholder="Ex: +227 90 00 00 00">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal" onclick="resetForm()">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fas fa-save me-2"></i>Enregistrer le profil
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * Réinitialise le formulaire pour un nouvel ajout
+     */
+    function resetForm() {
+        const form = document.getElementById('formJury');
+        if(form) form.reset();
+
+        const idField = document.getElementById('edit_jury_id');
+        if(idField) idField.value = "";
+
+        const label = document.getElementById('modalJuryLabel');
+        if(label) label.innerHTML = '<i class="fas fa-user-plus me-2 text-primary"></i>Nouveau Membre du Jury';
+    }
+
+    /**
+     * Sécurité : réinitialise si on ferme la modale après une édition
+     */
+    const modalEl = document.getElementById('modalJury');
+    if(modalEl) {
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            if (document.getElementById('edit_jury_id').value !== "") {
+                resetForm();
+            }
+        });
+    }
+</script>

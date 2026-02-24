@@ -1,29 +1,82 @@
 {% extends 'administration/base_de.html' %}
+{% load static %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'administration:planning_liste_vagues' %}?dept_id={{ chef_dept.id }}">Sessions</a></li>
-            <li class="breadcrumb-item active">{{ vague.libelle }}</li>
+        <ol class="breadcrumb bg-light p-2 rounded-3 shadow-sm">
+            <li class="breadcrumb-item">
+                <a href="{% url 'administration:planning_liste_vagues' %}?dept_id={{ chef_dept.id }}" class="text-decoration-none">
+                    <i class="fas fa-calendar-alt me-1"></i> Sessions de Soutenance
+                </a>
+            </li>
+            <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">
+                {{ vague.libelle }} - {{ chef_dept.nom }}
+            </li>
         </ol>
     </nav>
 
-    <div class="alert alert-dark border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4 bg-dark text-white">
-        <div>
-            <i class="fas  me-2 text-warning"></i>
-            Action Superadmin sur : <strong>{{ chef_dept.nom }}</strong>
+    <div class="alert alert-dark border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4 bg-dark text-white p-3">
+        <div class="d-flex align-items-center">
+            <div class="avatar-sm bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div>
+                <h6 class="mb-0 fw-bold">Mode Supervision Administrative</h6>
+                <small class="text-white-50">Département : {{ chef_dept.nom }} | Session : {{ vague.libelle }}</small>
+            </div>
         </div>
+
         <div class="d-flex gap-2">
-            <form action="{% url 'administration:tout_cocher_soutenu' vague.id %}" method="POST">
+            <form action="{% url 'administration:tout_cocher_soutenu' vague.id %}" method="POST" class="d-inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3" onclick="return confirm('Valider toutes les soutenances programmées ?')">
-                    <i class="fas fa-check-double me-1"></i> Tout cocher Soutenu
+                <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm"
+                        onclick="return confirm('Attention : Cette action marquera TOUS les étudiants programmés comme ayant soutenu avec succès. Continuer ?')">
+                    <i class="fas fa-check-double me-2"></i>Tout cocher "Soutenu"
                 </button>
             </form>
+
+            <a href="{% url 'administration:chef_liste_vagues' %}?dept_id={{ chef_dept.id }}" class="btn btn-outline-light rounded-pill px-3">
+                <i class="fas fa-cog me-1"></i> Gérer la session
+            </a>
         </div>
     </div>
 
-    {% include 'administration/chef/includes/planning_table_content.html' %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted fw-bold text-uppercase">Total Inscrits</small>
+                <h3 class="fw-bold mb-0 text-dark">{{ dossiers.count }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-primary border-4">
+                <small class="text-muted fw-bold text-uppercase">Soutenances Validées</small>
+                <h3 class="fw-bold mb-0 text-primary">
+                    {{ dossiers_soutenus_count|default:"0" }}
+                </h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        {% include 'administration/chef/includes/planning_table_content.html' %}
+    </div>
 </div>
+
+<style>
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: "\f105";
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        color: #ced4da;
+    }
+    .bg-dark {
+        background: linear-gradient(135deg, #1a1c23 0%, #252836 100%) !important;
+    }
+    .avatar-sm {
+        font-size: 1.2rem;
+    }
+    .rounded-4 { border-radius: 1rem !important; }
+</style>
 {% endblock %}

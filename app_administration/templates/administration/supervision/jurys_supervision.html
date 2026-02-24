@@ -3,16 +3,73 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="alert alert-primary border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4">
-        <div>
-            <i class="fas fa-gavel me-2"></i> 
-            Supervision des Jurys : <strong>{{ chef_dept.nom }}</strong>
+    <div class="alert alert-dark border-0 shadow-sm d-flex justify-content-between align-items-center rounded-4 mb-4 bg-dark text-white p-3">
+        <div class="d-flex align-items-center">
+            <div class="icon-shape bg-warning text-dark rounded-circle me-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 45px; height: 45px;">
+                <i class="fas fa-gavel fa-lg"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold">Gestion des Jurys (Supervision)</h5>
+                <small class="text-white-50">Département : <strong>{{ chef_dept.nom }}</strong></small>
+            </div>
         </div>
-        <a href="{% url 'administration:accueil_chef' %}" class="btn btn-sm btn-light rounded-pill">
-            <i class="fas fa-exchange-alt me-1"></i> Changer de département
-        </a>
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalJury" onclick="resetForm()">
+                <i class="fas fa-plus-circle me-2"></i>Nouveau Membre
+            </button>
+            <a href="{% url 'administration:accueil_chef' %}" class="btn btn-outline-light rounded-pill px-3">
+                <i class="fas fa-exchange-alt me-1"></i> Changer de département
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4">
+        <form method="GET" class="row g-3 align-items-center">
+            <input type="hidden" name="dept_id" value="{{ chef_dept.id }}">
+
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control bg-light border-0" placeholder="Rechercher par nom, prénom ou spécialité..." value="{{ request.GET.search }}">
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <select name="statut" class="form-select bg-light border-0">
+                    <option value="">Tous les statuts</option>
+                    <option value="INTERNE" {% if request.GET.statut == 'INTERNE' %}selected{% endif %}>Permanent</option>
+                    <option value="EXTERNE" {% if request.GET.statut == 'EXTERNE' %}selected{% endif %}>Vacataire</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-dark w-100 rounded-pill fw-bold text-uppercase">Filtrer</button>
+                <a href="{% url 'administration:liste_jurys_chef' %}?dept_id={{ chef_dept.id }}" class="btn btn-light rounded-pill border shadow-sm">
+                    <i class="fas fa-sync-alt"></i>
+                </a>
+            </div>
+        </form>
     </div>
 
     {% include 'administration/chef/includes/jurys_table_content.html' %}
 </div>
+
+<style>
+    /* Gradient Sombre pour le bandeau supérieur */
+    .bg-dark {
+        background: linear-gradient(135deg, #1a1c23 0%, #252836 100%) !important;
+    }
+    .rounded-4 { border-radius: 1rem !important; }
+
+    /* Animation légère sur l'icône au survol */
+    .icon-shape { transition: transform 0.3s ease; }
+    .alert:hover .icon-shape { transform: rotate(15deg); }
+
+    /* Harmonisation des selects et inputs */
+    .form-select, .form-control {
+        border-radius: 0.75rem;
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+    }
+</style>
 {% endblock %}

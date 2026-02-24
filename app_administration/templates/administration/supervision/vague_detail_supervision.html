@@ -1,0 +1,150 @@
+{% extends 'administration/base_de.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'administration:chef_liste_vagues' %}?dept_id={{ chef_dept.id }}" class="btn btn-light rounded-circle shadow-sm me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h4 class="fw-bold mb-0">{{ vague.libelle }}</h4>
+                    <span class="badge bg-dark rounded-pill">Dpt : {{ chef_dept.nom }}</span>
+                </div>
+                <div class="d-flex align-items-center mt-1">
+                    <span class="text-muted small me-2">Promotions autorisées :</span>
+                    {% for annee in vague.annees_concernees.all %}
+                        <span class="badge bg-primary-subtle text-primary border px-2 py-1 me-1 small">#{{ annee.libelle }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            {% if peut_reouvrir %}
+                <a href="{% url 'administration:chef_toggle_cloture' vague.id %}" class="btn btn-warning rounded-pill px-4 shadow-sm fw-bold">
+                    <i class="fas fa-unlock me-2"></i>Réouvrir la session
+                </a>
+            {% elif peut_modifier %}
+                <a href="{% url 'administration:chef_toggle_cloture' vague.id %}" class="btn btn-danger rounded-pill px-4 shadow-sm fw-bold"
+                   onclick="return confirm('Voulez-vous clôturer cette session pour le département {{ chef_dept.nom }} ?')">
+                    <i class="fas fa-lock me-2"></i>Clôturer la session
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card p-4 mb-4 border-0 shadow-sm rounded-4">
+        <form method="GET" class="row g-3">
+            <input type="hidden" name="dept_id" value="{{ chef_dept.id }}">
+            
+            <div class="col-md-3">
+                <label class="small fw-bold text-muted ps-1">Filière</label>
+                <select name="filiere" class="form-select border-0 bg-light">
+                    <option value="">Toutes les filières</option>
+                    {% for f in filieres %}
+                        <option value="{{f.id}}" {% if request.GET.filiere == f.id|stringformat:"s" %}selected{% endif %}>{{f.nom}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold text-muted ps-1">Classe</label>
+                <select name="classe" class="form-select border-0 bg-light">
+                    <option value="">Toutes les classes</option>
+                    {% for c in classes_du_dept %}
+                        <option value="{{c.id}}" {% if request.GET.classe == c.id|stringformat:"s" %}selected{% endif %}>{{c.nom}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold text-muted ps-1">Promotion</label>
+                <select name="annee" class="form-select border-0 bg-light">
+                    <option value="">Toutes les promotions</option>
+                    {% for a in vague.annees_concernees.all %}
+                        <option value="{{a.id}}" {% if request.GET.annee == a.id|stringformat:"s" %}selected{% endif %}>{{a.libelle}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-dark flex-grow-1 rounded-pill fw-bold">Filtrer</button>
+                <a href="{% url 'administration:chef_detail_vague' vague.id %}?dept_id={{ chef_dept.id }}" class="btn btn-light rounded-pill border"><i class="fas fa-sync-alt"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="bg-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-4 py-3">Étudiant & Classe</th>
+                        <th>Sujet / Thème</th>
+                        <th>Lieu & Encadreur</th>
+                        <th class="text-center">Action Supervision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in dossiers %}
+                    <tr class="transition">
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark">{{ d.etudiant.nom }} {{ d.etudiant.prenom }}</div>
+                            <div class="text-primary small fw-bold">{{ d.etudiant.classe.nom }}</div>
+                            <span class="badge bg-light text-muted border x-small">#{{ d.etudiant.annee.libelle }}</span>
+                        </td>
+                        <td style="max-width: 300px;">
+                            <div class="small fw-bold text-dark text-wrap">{{ d.theme|default:"Sujet non défini" }}</div>
+                        </td>
+                        <td>
+                            <div class="small"><i class="fas fa-map-marker-alt me-1 text-muted"></i> {{ d.lieu_stage|default:"---" }}</div>
+                            <div class="small mt-1"><i class="fas fa-user-tie me-1 text-muted"></i> {{ d.encadreur|default:"---" }}</div>
+                        </td>
+                        <td class="text-center">
+                            {% if peut_modifier %}
+                                {% if d.vague == vague %}
+                                    <div class="btn-group shadow-sm rounded-pill overflow-hidden border bg-white">
+                                        <span class="btn btn-sm btn-success px-3 pe-none fw-bold"><i class="fas fa-check-circle me-1"></i> Inscrit</span>
+                                        <a href="{% url 'administration:chef_annuler_inscription' d.id vague.id %}" 
+                                           class="btn btn-sm btn-white text-danger border-start border-light" title="Retirer l'étudiant">
+                                            <i class="fas fa-times"></i>
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <a href="{% url 'administration:chef_inscrire_vague' d.id vague.id %}"
+                                       class="btn btn-outline-primary btn-sm rounded-pill px-4 hover-shadow transition fw-bold">
+                                       <i class="fas fa-plus me-1"></i> Inscrire
+                                    </a>
+                                {% endif %}
+                            {% else %}
+                                 {% if d.vague == vague %}
+                                    <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill border">Confirmé</span>
+                                 {% else %}
+                                    <span class="text-muted x-small italic">Session close</span>
+                                 {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5">
+                            <i class="fas fa-user-slash fa-3x text-light mb-3"></i>
+                            <p class="text-muted mb-0">Aucun étudiant éligible dans ce département pour le moment.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .x-small { font-size: 0.7rem; }
+    .table thead th { font-weight: 700; background-color: #fcfcfd; }
+    .hover-shadow:hover { background-color: #0d6efd !important; color: white !important; }
+    .transition { transition: all 0.2s ease-in-out; }
+    .btn-white { background: white; }
+    .btn-white:hover { background: #fff5f5; }
+</style>
+{% endblock %}
