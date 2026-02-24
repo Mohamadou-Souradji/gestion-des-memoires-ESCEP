@@ -155,14 +155,14 @@
     <a class="nav-link" href="{% if chef_dept %}{% url 'administration:liste_themes_etudiants' %}?dept_id={{ chef_dept.id }}{% else %}{% url 'administration:accueil_chef' %}{% endif %}">
         <i class="fas fa-book me-2"></i> Thèmes & Inscriptions
     </a>
-
+ <a class="nav-link" href="{% if chef_dept %}{% url 'administration:liste_jurys_chef' %}?dept_id={{ chef_dept.id }}{% else %}{% url 'administration:accueil_chef' %}{% endif %}">
+        <i class="fas fa-gavel me-2"></i> Base des Jurys
+    </a>
     <a class="nav-link" href="{% if chef_dept %}{% url 'administration:planning_liste_vagues' %}?dept_id={{ chef_dept.id }}{% else %}{% url 'administration:accueil_chef' %}{% endif %}">
         <i class="fas fa-calendar-alt me-2"></i> Planning Soutenances
     </a>
 
-    <a class="nav-link" href="{% if chef_dept %}{% url 'administration:liste_jurys_chef' %}?dept_id={{ chef_dept.id }}{% else %}{% url 'administration:accueil_chef' %}{% endif %}">
-        <i class="fas fa-gavel me-2"></i> Base des Jurys
-    </a>
+   
 
     <a class="nav-link" href="{% if chef_dept %}{% url 'administration:page_rapport_chef' %}?dept_id={{ chef_dept.id }}{% else %}{% url 'administration:accueil_chef' %}{% endif %}">
         <i class="fas fa-print me-2 text-warning"></i> Rapports & Impressions
