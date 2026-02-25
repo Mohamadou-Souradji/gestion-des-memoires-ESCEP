@@ -5,3 +5,6 @@ openpyxl
 python-docx
 pandas
 Pillow
+dj-database-url
+whitenoise
+gunicorn
