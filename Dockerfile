@@ -19,8 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copie du projet
 COPY . /app/
 
-# On lance les migrations et on démarre le serveur en une seule commande
-# REMPLACE 'TON_PROJET' par le nom du dossier de ton projet Django
+# On lance les migrations et on démarre le serveur
+# J'ai remplacé TON_PROJET par core
 CMD python manage.py collectstatic --noinput && \
     python manage.py migrate && \
-    gunicorn TON_PROJET.wsgi:application --bind 0.0.0.0:$PORT
+    gunicorn core.wsgi:application --bind 0.0.0.0:$PORT
